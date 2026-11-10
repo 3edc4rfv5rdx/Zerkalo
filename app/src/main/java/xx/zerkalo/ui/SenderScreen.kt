@@ -78,16 +78,13 @@ fun SenderScreen(model: SenderModel) {
             model.disconnect()
         }
     }
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        // Mirroring works either way; without it there is only no Stop button in the shade.
+    val askPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        // Mirroring works either way; without them there is no sound or no Stop button in the shade.
     }
-    // On its own and early, so this dialog never competes with the capture one.
+    // On its own and early, so these dialogs never compete with the capture one.
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        val missing = missingPermissions(context)
+        if (missing.isNotEmpty()) askPermissions.launch(missing)
     }
     // Keyed on the status itself: each new connection asks for capture once.
     LaunchedEffect(status) {
@@ -146,6 +143,15 @@ fun SenderScreen(model: SenderModel) {
             onDismiss = { enteringAddress = false },
         )
     }
+}
+
+/** What mirroring would like and does not have yet. */
+private fun missingPermissions(context: Context): Array<String> {
+    val wanted = buildList {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(Manifest.permission.RECORD_AUDIO)
+    }
+    return wanted.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }.toTypedArray()
 }
 
 /** Fills the screen while mirroring, so there is no doubt that it is under way. */

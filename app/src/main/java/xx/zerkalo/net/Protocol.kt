@@ -1,6 +1,7 @@
 package xx.zerkalo.net
 
 import xx.zerkalo.ANNOUNCE_MAGIC
+import xx.zerkalo.AUDIO_HEADER_SIZE
 import xx.zerkalo.CODEC_H264
 import xx.zerkalo.CODEC_H265
 import xx.zerkalo.ID_SIZE
@@ -10,6 +11,7 @@ import xx.zerkalo.MAX_NACK_FRAGMENTS
 import xx.zerkalo.MAX_NAME_BYTES
 import xx.zerkalo.NONCE_SIZE
 import xx.zerkalo.PACKET_ANNOUNCE
+import xx.zerkalo.PACKET_AUDIO
 import xx.zerkalo.PACKET_NACK
 import xx.zerkalo.PACKET_VIDEO
 import xx.zerkalo.PROOF_SIZE
@@ -175,6 +177,9 @@ sealed class ControlMessage(internal val type: Int) {
 
     data object Bye : ControlMessage(TYPE_BYE)
 
+    /** Sent only to a receiver whose AUTH_OK mask offers sound. */
+    class AudioConfig(val sampleRate: Int, val channels: Int, val csd: ByteArray) : ControlMessage(TYPE_AUDIO_CONFIG)
+
     data class Error(val code: ErrorCode) : ControlMessage(TYPE_ERROR)
 
     internal fun payload(): ByteArray {
@@ -187,6 +192,7 @@ sealed class ControlMessage(internal val type: Int) {
             is AuthOk -> writer.u8(codecs)
             is Config -> writer.u16(configId).u8(codec).u16(width).u16(height).raw(csd)
             is Ready -> writer.u16(configId)
+            is AudioConfig -> writer.u32(sampleRate.toLong()).u8(channels).raw(csd)
             is Error -> writer.u8(code.wire)
             KeyframeRequest, Ping, Bye -> Unit
         }
@@ -203,10 +209,7 @@ sealed class ControlMessage(internal val type: Int) {
         const val TYPE_KEYFRAME_REQUEST = 0x07
         const val TYPE_PING = 0x08
         const val TYPE_BYE = 0x09
-
-        // 0x0A is reserved for AUDIO_CONFIG. A sender only sends it to a receiver whose
-        // AUTH_OK mask offers sound, so a receiver without sound never sees it.
-
+        const val TYPE_AUDIO_CONFIG = 0x0A
         const val TYPE_ERROR = 0x0F
     }
 }
@@ -228,6 +231,7 @@ internal fun decodeControl(type: Int, payload: ByteArray): ControlMessage {
         ControlMessage.TYPE_KEYFRAME_REQUEST -> ControlMessage.KeyframeRequest
         ControlMessage.TYPE_PING -> ControlMessage.Ping
         ControlMessage.TYPE_BYE -> ControlMessage.Bye
+        ControlMessage.TYPE_AUDIO_CONFIG -> decodeAudioConfig(reader)
         ControlMessage.TYPE_ERROR -> ControlMessage.Error(ErrorCode.of(reader.u8()))
         else -> throw ProtocolException("Unknown message type $type")
     }
@@ -245,6 +249,15 @@ private fun decodeConfig(reader: Reader): ControlMessage.Config {
     val csd = reader.rest()
     if (csd.isEmpty()) throw ProtocolException("No codec configuration")
     return ControlMessage.Config(configId, codec, width, height, csd)
+}
+
+private fun decodeAudioConfig(reader: Reader): ControlMessage.AudioConfig {
+    val sampleRate = reader.u32()
+    val channels = reader.u8()
+    if (sampleRate == 0L || sampleRate > Int.MAX_VALUE || channels == 0) throw ProtocolException("Bad audio format")
+    val csd = reader.rest()
+    if (csd.isEmpty()) throw ProtocolException("No codec configuration")
+    return ControlMessage.AudioConfig(sampleRate.toInt(), channels, csd)
 }
 
 /** Writes [message] in a single call. Callers sharing [out] between threads must serialise their calls. */
@@ -327,6 +340,20 @@ data class VideoHeader(
             val ptsMs = reader.u32()
             if (fragIndex >= fragCount) return null
             return VideoHeader(flags and VIDEO_FLAG_KEYFRAME != 0, configId, frameId, fragIndex, fragCount, ptsMs)
+        }
+    }
+}
+
+/** One encoded sound frame. [seq] counts up from 1, and each frame is sent twice. */
+class AudioPacket(val seq: Long, val ptsMs: Long, val data: ByteArray) {
+    fun encode(): ByteArray = Writer().u8(PACKET_AUDIO).u32(seq).u32(ptsMs).raw(data).toByteArray()
+
+    companion object {
+        fun parse(data: ByteArray, length: Int): AudioPacket? {
+            if (length <= AUDIO_HEADER_SIZE || length > MAX_DATAGRAM) return null
+            val reader = Reader(data, length)
+            if (reader.u8() != PACKET_AUDIO) return null
+            return AudioPacket(reader.u32(), reader.u32(), reader.rest())
         }
     }
 }

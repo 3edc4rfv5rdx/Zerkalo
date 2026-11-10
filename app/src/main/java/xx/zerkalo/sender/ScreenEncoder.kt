@@ -17,6 +17,7 @@ import android.view.Display
 import android.view.Surface
 import xx.zerkalo.KEY_FRAME_INTERVAL_S
 import xx.zerkalo.MAX_DATAGRAM
+import xx.zerkalo.PTS_MASK
 import xx.zerkalo.REPEAT_FRAME_AFTER_US
 import xx.zerkalo.VIDEO_PORT
 import xx.zerkalo.net.ControlChannel
@@ -42,7 +43,6 @@ import kotlin.concurrent.thread
 private const val TAG = "ScreenEncoder"
 private const val DEQUEUE_TIMEOUT_US = 10_000L
 private const val STOP_WAIT_MS = 1_000L
-private const val PTS_MASK = 0xFFFF_FFFFL
 
 /** Captures the screen, encodes it and sends it to the far end of [channel]. */
 class ScreenEncoder(
@@ -51,6 +51,7 @@ class ScreenEncoder(
     private val channel: ControlChannel,
     private val receiverCodecs: Int,
     private val options: StreamOptions,
+    private val baseUs: Long,
     private val onFailed: () -> Unit,
 ) {
     /** One encoder instance; a new one comes with every change of the screen's shape. */
@@ -87,7 +88,6 @@ class ScreenEncoder(
     // Touched by the worker thread only; they run on across encoder restarts.
     private var configId = 0
     private var frameId = 0L
-    private var firstPtsUs = -1L
     private var videoCodec = VideoCodec.H264
 
     fun start() {
@@ -138,7 +138,7 @@ class ScreenEncoder(
                     }
                     sendLoop(next, fragmenter)
                     codec = null
-                    display?.surface = null
+                    display.surface = null
                     closeEncoder(next)
                     active = null
                 }
@@ -269,8 +269,7 @@ class ScreenEncoder(
                     configId++
                     channel.send(ControlMessage.Config(configId, videoCodec.id, encoder.size.width, encoder.size.height, bytes))
                 } else if (readyConfig == configId) {
-                    if (firstPtsUs < 0) firstPtsUs = info.presentationTimeUs
-                    val ptsMs = (info.presentationTimeUs - firstPtsUs) / 1000 and PTS_MASK
+                    val ptsMs = (info.presentationTimeUs - baseUs) / 1000 and PTS_MASK
                     val keyframe = info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0
                     val frame = SentFrame(bytes, keyframe, configId, frameId++, ptsMs)
                     sent.put(frame)

@@ -8,7 +8,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import xx.zerkalo.CODEC_AUDIO_OPUS
+import xx.zerkalo.CODEC_AUDIO_AAC
 import xx.zerkalo.CODEC_H264
 import xx.zerkalo.CODEC_H265
 import xx.zerkalo.MAX_DATAGRAM
@@ -156,8 +156,8 @@ class ProtocolTest {
 
     @Test
     fun audioBitTravelsInTheCodecMask() {
-        val message = read(encoded(ControlMessage.AuthOk(codecMaskOf(CODEC_H264, CODEC_AUDIO_OPUS)))) as ControlMessage.AuthOk
-        assertTrue(codecMaskHas(message.codecs, CODEC_AUDIO_OPUS))
+        val message = read(encoded(ControlMessage.AuthOk(codecMaskOf(CODEC_H264, CODEC_AUDIO_AAC)))) as ControlMessage.AuthOk
+        assertTrue(codecMaskHas(message.codecs, CODEC_AUDIO_AAC))
         assertTrue(codecMaskHas(message.codecs, CODEC_H264))
         assertFalse(codecMaskHas(message.codecs, CODEC_H265))
     }
@@ -268,5 +268,42 @@ class ProtocolTest {
         assertNull(Nack.parse(zeroCount, zeroCount.size))
         val wrongType = good.copyOf().also { it[0] = 0x10 }
         assertNull(Nack.parse(wrongType, wrongType.size))
+    }
+
+    @Test
+    fun audioConfigRoundTrips() {
+        val message = read(encoded(ControlMessage.AudioConfig(48_000, 2, byteArrayOf(0x11, 0x90.toByte())))) as ControlMessage.AudioConfig
+        assertEquals(48_000, message.sampleRate)
+        assertEquals(2, message.channels)
+        assertArrayEquals(byteArrayOf(0x11, 0x90.toByte()), message.csd)
+    }
+
+    @Test
+    fun audioConfigWithoutCsdIsRefused() {
+        val bytes = encoded(ControlMessage.AudioConfig(48_000, 2, ByteArray(1))).dropLast(1).toByteArray()
+        bytes[5] = 5
+        assertThrows(ProtocolException::class.java) { read(bytes) }
+    }
+
+    @Test
+    fun audioPacketHasTheDocumentedLayout() {
+        assertArrayEquals(hex("12000000070000000aabcd"), AudioPacket(7, 10, hex("abcd")).encode())
+    }
+
+    @Test
+    fun audioPacketRoundTrips() {
+        val bytes = AudioPacket(0xFFFF_FFFFL, 1234, byteArrayOf(1, 2, 3)).encode()
+        val parsed = checkNotNull(AudioPacket.parse(bytes + ByteArray(8), bytes.size))
+        assertEquals(0xFFFF_FFFFL, parsed.seq)
+        assertEquals(1234L, parsed.ptsMs)
+        assertArrayEquals(byteArrayOf(1, 2, 3), parsed.data)
+    }
+
+    @Test
+    fun badAudioPacketIsDropped() {
+        val good = AudioPacket(1, 1, byteArrayOf(1)).encode()
+        assertNull(AudioPacket.parse(good, good.size - 1))
+        assertNull(AudioPacket.parse(good.copyOf().also { it[0] = 0x10 }, good.size))
+        assertNull(AudioPacket.parse(ByteArray(MAX_DATAGRAM + 1), MAX_DATAGRAM + 1))
     }
 }

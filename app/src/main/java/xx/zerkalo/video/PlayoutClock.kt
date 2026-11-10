@@ -3,6 +3,9 @@ package xx.zerkalo.video
 import xx.zerkalo.PLAYOUT_DELAY_MS
 import xx.zerkalo.PLAYOUT_WINDOW_MS
 
+/** The clock both the frames' deadlines and their moment on screen are measured with. */
+fun monotonicMs(): Long = System.nanoTime() / 1_000_000
+
 /**
  * When to show each frame so that network jitter does not reach the screen. The two
  * devices' clocks are never compared: the smallest (arrival - timestamp) over a recent

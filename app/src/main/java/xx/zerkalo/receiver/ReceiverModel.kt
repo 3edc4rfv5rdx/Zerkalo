@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import xx.zerkalo.CODEC_AUDIO_AAC
 import xx.zerkalo.CONTROL_PORT
 import xx.zerkalo.DISCOVERY_PORT
 import xx.zerkalo.net.Announce
@@ -15,6 +16,7 @@ import xx.zerkalo.net.AnnounceSender
 import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.net.PinGuard
 import xx.zerkalo.net.ReceiverServer
+import xx.zerkalo.net.codecMaskOf
 import xx.zerkalo.net.localIpv4Addresses
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
@@ -69,10 +71,15 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
             override fun onDisconnected() = endSessionState()
 
             override fun onMessage(message: ControlMessage) {
-                if (message is ControlMessage.Config) session?.onConfig(message)
+                when (message) {
+                    is ControlMessage.Config -> session?.onConfig(message)
+                    is ControlMessage.AudioConfig -> session?.onAudioConfig(message)
+                    else -> Unit
+                }
             }
         }
-        started = ReceiverServer(CONTROL_PORT, id, { hardwareCodecMask(encoder = false) }, guard, PairedDevices.senders, listener)
+        val codecs = { hardwareCodecMask(encoder = false) or codecMaskOf(CODEC_AUDIO_AAC) }
+        started = ReceiverServer(CONTROL_PORT, id, codecs, guard, PairedDevices.senders, listener)
         server = started
         update { copy(portTaken = false) }
         thread(isDaemon = true, name = "receiver-start") {

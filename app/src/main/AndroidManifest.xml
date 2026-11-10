@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Capturing what apps play. Asked for by the sender only; the microphone is never opened. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
     <!-- The low-latency Wi-Fi lock and the sender's dim-screen lock held during a session. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -55,7 +59,7 @@
         <service
             android:name=".sender.SenderService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="mediaProjection|microphone" />
 
         <!-- Hands the updater's downloaded APK to the system installer. -->
         <provider

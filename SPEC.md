@@ -204,16 +204,16 @@ Wi-Fi power saving causes latency spikes. The foreground service notification ha
 - On API 30+ `KEY_LOW_LATENCY` is turned on if the decoder supports it
 - AUTH_OK reports the TV box's real codecs from `MediaCodecList`
 
-## Hooks for sound
+## Sound
 
-Sound is added as a separate stage, but the protocol format already leaves room for it, so the
-video will not have to change and the protocol version will not grow:
+Sound is captured, encoded and sent beside the video, with the same protocol version:
 
-- **Negotiation.** Bit 4 of AUTH_OK's codec mask means Opus (`CODEC_AUDIO_OPUS`). The sender sends
+- **Negotiation.** Bit 4 of AUTH_OK's codec mask means AAC-LC (`CODEC_AUDIO_AAC`). AAC and not Opus, because a TV box on Android 9 has no way to take the configuration Android's Opus encoder emits. The sender sends
   sound only to a receiver that set this bit, so an old receiver will not see it.
-- **Setup.** Control message type 0x0A is reserved for AUDIO_CONFIG: codec, sample rate, channels,
-  CSD.
-- **Data.** Datagram type 0x12 (`PACKET_AUDIO`), the same port 47702. The receiver tells datagrams
+- **Setup.** Control message type 0x0A is AUDIO_CONFIG: `u32 sampleRate`, `u8 channels`, CSD bytes.
+- **Data.** Datagram type 0x12 (`PACKET_AUDIO`): `u8 type | u32 seq | u32 ptsMs | payload`, the same
+  port 47702. Each frame goes out twice, the second time just before the next frame, which covers
+  a single lost packet without NACK. The receiver tells datagrams
   apart by the first byte, so no second socket is needed.
 - **Sync.** `ptsMs` of video and sound count from the same session clock, and `PlayoutClock` is
   written to be shared by both streams, not for video alone.
@@ -260,7 +260,7 @@ holes for NACK, a change of `configId`.
 4. H.264 video with no loss handling: a picture on the TV.
 5. Resilience: NACK, key frame requests, clocked playout, screen rotation.
 6. H.265, quality and frame rate settings.
-7. Later: sound.
+7. Sound.
 8. Keep the sender's screen from going off by timeout during mirroring, while letting it dim (`SCREEN_DIM_WAKE_LOCK`).
 
 ## To check on hardware

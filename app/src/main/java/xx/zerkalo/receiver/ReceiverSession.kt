@@ -12,12 +12,14 @@ import xx.zerkalo.MAX_DATAGRAM
 import xx.zerkalo.MAX_ENCODED_FRAME_BYTES
 import xx.zerkalo.VIDEO_PORT
 import xx.zerkalo.VIDEO_RECEIVE_BUFFER
+import xx.zerkalo.net.AudioPacket
 import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.net.VideoHeader
 import xx.zerkalo.video.AssembledFrame
 import xx.zerkalo.video.FrameAssembler
 import xx.zerkalo.video.PlayoutClock
 import xx.zerkalo.video.mimeOf
+import xx.zerkalo.video.monotonicMs
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -54,6 +56,7 @@ class ReceiverSession(
 
     private val frames = ArrayBlockingQueue<AssembledFrame>(DECODER_QUEUE_FRAMES)
     private val clock = PlayoutClock()
+    private val audio = AudioPlayer(clock)
 
     @Volatile
     private var stopped = false
@@ -88,11 +91,13 @@ class ReceiverSession(
     fun start() {
         receiveThread = thread(isDaemon = true, name = "video-receive") { receiveLoop() }
         decodeThread = thread(isDaemon = true, name = "video-decode") { decodeLoop() }
+        audio.start()
     }
 
     fun stop() {
         stopped = true
         socket?.close()
+        audio.stop()
         decodeThread?.join(SURFACE_RELEASE_WAIT_MS)
     }
 
@@ -101,6 +106,8 @@ class ReceiverSession(
         onVideoSize(message.width, message.height)
         updateWanted()
     }
+
+    fun onAudioConfig(message: ControlMessage.AudioConfig) = audio.onConfig(message)
 
     /** Null means the surface is going away: returns once the decoder has let go of it. */
     fun setSurface(newSurface: Surface?) {
@@ -144,11 +151,9 @@ class ReceiverSession(
                 try {
                     packet.length = buffer.size
                     bound.receive(packet)
-                    val header = if (packet.address?.hostAddress == senderHost) {
-                        VideoHeader.parse(buffer, packet.length)
-                    } else {
-                        null
-                    }
+                    val fromSender = packet.address?.hostAddress == senderHost
+                    val header = if (fromSender) VideoHeader.parse(buffer, packet.length) else null
+                    if (fromSender && header == null) AudioPacket.parse(buffer, packet.length)?.let(audio::offer)
                     if (header != null && header.configId == config?.configId) {
                         if (header.configId != assemblerConfig) {
                             assembler = FrameAssembler()
@@ -212,7 +217,7 @@ class ReceiverSession(
         nackedFragments = 0
     }
 
-    private fun nowMs(): Long = System.nanoTime() / NANOS_PER_MS
+    private fun nowMs(): Long = monotonicMs()
 
     private fun decodeLoop() {
         var decoder: MediaCodec? = null

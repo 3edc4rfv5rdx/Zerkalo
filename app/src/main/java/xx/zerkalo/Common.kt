@@ -21,13 +21,15 @@ const val MAX_CONTROL_PAYLOAD = 65_536
 const val MAX_DATAGRAM = 1400
 const val VIDEO_HEADER_SIZE = 16
 const val MAX_VIDEO_PAYLOAD = MAX_DATAGRAM - VIDEO_HEADER_SIZE
+const val AUDIO_HEADER_SIZE = 9
+const val MAX_AUDIO_PAYLOAD = MAX_DATAGRAM - AUDIO_HEADER_SIZE
 const val MAX_NACK_FRAGMENTS = 255
 
 const val PACKET_ANNOUNCE = 0x01
 const val PACKET_VIDEO = 0x10
 const val PACKET_NACK = 0x11
 
-/** Reserved for the sound stage: audio datagrams share the video port, told apart by this first byte. */
+/** Audio datagrams share the video port, told apart by this first byte. */
 const val PACKET_AUDIO = 0x12
 
 const val VIDEO_FLAG_KEYFRAME = 0x01
@@ -35,8 +37,8 @@ const val VIDEO_FLAG_KEYFRAME = 0x01
 const val CODEC_H264 = 0
 const val CODEC_H265 = 1
 
-/** Reserved for the sound stage: a receiver that can play it sets this bit in AUTH_OK's mask. */
-const val CODEC_AUDIO_OPUS = 4
+/** A receiver that can play sound sets this bit in AUTH_OK's mask. AAC, as every Android since 9 decodes it the same way. */
+const val CODEC_AUDIO_AAC = 4
 
 const val PIN_LENGTH = 4
 const val PIN_MAX_FAILURES = 3
@@ -60,6 +62,23 @@ const val H265_BIT_RATE_PERCENT = 65
 const val FRAME_RATE_STANDARD = 30
 const val FRAME_RATE_HIGH = 60
 const val KEY_FRAME_INTERVAL_S = 2
+
+/** Timestamps travel as u32 milliseconds. */
+const val PTS_MASK = 0xFFFF_FFFFL
+
+const val AUDIO_SAMPLE_RATE = 48_000
+const val AUDIO_CHANNELS = 2
+const val AUDIO_BIT_RATE = 160_000
+
+/** One read from the capture: 1024 stereo samples, an AAC frame's worth. */
+const val AUDIO_READ_BYTES = 4096
+const val AUDIO_QUEUE_PACKETS = 32
+
+/**
+ * Only sound this far behind the picture is dropped. A smaller lag is played as it is:
+ * the output path can take longer than the picture waits, and dropping would mean silence.
+ */
+const val AUDIO_MAX_LATE_MS = 500L
 
 /** Makes the encoder repeat a still picture, so a static photo keeps producing frames. */
 const val REPEAT_FRAME_AFTER_US = 100_000L

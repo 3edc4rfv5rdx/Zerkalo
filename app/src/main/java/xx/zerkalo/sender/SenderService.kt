@@ -1,5 +1,6 @@
 package xx.zerkalo.sender
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Notification
@@ -9,6 +10,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -22,8 +24,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
+import xx.zerkalo.CODEC_AUDIO_AAC
 import xx.zerkalo.MainActivity
 import xx.zerkalo.R
+import xx.zerkalo.net.codecMaskHas
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.localizedContext
 import xx.zerkalo.video.acquireLowLatencyWifi
@@ -41,6 +45,7 @@ class SenderService : Service() {
     private var encoder: ScreenEncoder? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var screenLock: PowerManager.WakeLock? = null
+    private var stopAudio: (() -> Unit)? = null
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() = SenderSession.disconnect()
@@ -58,10 +63,16 @@ class SenderService : Service() {
             return START_NOT_STICKY
         }
         // First of all: a service started in the foreground has only seconds to say so.
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val canCaptureSound = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        var type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
         } else {
             0
+        }
+        // Declaring this without the permission granted would crash the service.
+        if (canCaptureSound && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         }
         ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(), type)
 
@@ -86,6 +97,8 @@ class SenderService : Service() {
         captured.registerCallback(projectionCallback, mainHandler)
         wifiLock = acquireLowLatencyWifi(this)
         screenLock = keepScreenDimmed()
+        // Before either stream starts, so that picture and sound share one time origin.
+        val baseUs = System.nanoTime() / 1000
 
         val started = ScreenEncoder(
             this,
@@ -93,6 +106,7 @@ class SenderService : Service() {
             channel,
             SenderSession.receiverCodecs,
             AppSettings.streamOptions(),
+            baseUs,
             onFailed = { SenderSession.fail(R.string.error_encoder) },
         )
         encoder = started
@@ -100,6 +114,13 @@ class SenderService : Service() {
         SenderSession.onKeyframeRequest = started::requestKeyFrame
         SenderSession.onClosed = { mainHandler.post { stopSelf() } }
         started.start()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && canCaptureSound &&
+            codecMaskHas(SenderSession.receiverCodecs, CODEC_AUDIO_AAC)
+        ) {
+            val capture = AudioCapture(captured, channel, baseUs)
+            capture.start()
+            stopAudio = capture::stop
+        }
         SenderSession.markStreaming()
         // The connection may have ended before onClosed was listening.
         if (SenderSession.channel == null) stopSelf()
@@ -110,6 +131,8 @@ class SenderService : Service() {
         SenderSession.onReady = null
         SenderSession.onKeyframeRequest = null
         SenderSession.onClosed = null
+        stopAudio?.invoke()
+        stopAudio = null
         encoder?.stop()
         encoder = null
         projection?.unregisterCallback(projectionCallback)
