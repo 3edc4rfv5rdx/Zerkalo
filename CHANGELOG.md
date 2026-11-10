@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: Receivers once connected stay in the sender's list, so their address need not be typed again.
 - N: The sender's screen is captured, encoded as H.264 and shown full screen on the receiver.
 - N: Receivers are found on the network, paired with a PIN once, and stay connected until either side leaves.
 - I: Wire protocol and PIN pairing with JVM tests, with room reserved for sound.

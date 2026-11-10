@@ -67,20 +67,16 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
         _found.value = emptyList()
     }
 
-    fun connect(receiver: FoundReceiver) {
-        connectTo(ConnectTarget(receiver.id, receiver.name, receiver.host, receiver.port))
-    }
-
     fun connectByAddress(host: String) {
-        connectTo(ConnectTarget(null, host, host, CONTROL_PORT))
+        connect(ConnectTarget(null, host, host, CONTROL_PORT))
     }
 
-    private fun connectTo(target: ConnectTarget) {
+    fun connect(target: ConnectTarget) {
         when (status.value) {
             is SenderStatus.Connecting, is SenderStatus.Connected, is SenderStatus.Streaming -> return
             else -> Unit
         }
-        val paired = PairedDevices.find(target.id, target.host)
+        val paired = PairedDevices.receivers.find(target.id, target.host)
         if (paired == null) {
             askPin(target, wrong = false)
         } else {
@@ -115,12 +111,12 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
         thread(isDaemon = true, name = "sender-connect") {
             when (val result = connectToReceiver(target.host, target.port, senderId, senderName, credential)) {
                 is ConnectResult.Connected -> {
-                    PairedDevices.save(result.receiverId, result.key, target.name, target.host)
+                    PairedDevices.receivers.save(result.receiverId, result.key, target.name, target.host)
                     pending = null
                     SenderSession.attach(result.channel, target.name)
                 }
                 ConnectResult.NeedPin -> {
-                    PairedDevices.find(target.id, target.host)?.let { PairedDevices.forget(it.id) }
+                    PairedDevices.receivers.find(target.id, target.host)?.let { PairedDevices.receivers.forget(it.id) }
                     askPin(target, wrong = false)
                 }
                 ConnectResult.BadPin -> askPin(target, wrong = true)

@@ -72,7 +72,7 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
                 if (message is ControlMessage.Config) session?.onConfig(message)
             }
         }
-        started = ReceiverServer(CONTROL_PORT, id, { hardwareCodecMask(encoder = false) }, guard, PairedDevices, listener)
+        started = ReceiverServer(CONTROL_PORT, id, { hardwareCodecMask(encoder = false) }, guard, PairedDevices.senders, listener)
         server = started
         update { copy(portTaken = false) }
         thread(isDaemon = true, name = "receiver-start") {

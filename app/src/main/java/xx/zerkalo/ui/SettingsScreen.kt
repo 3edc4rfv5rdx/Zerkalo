@@ -38,6 +38,7 @@ import dev.updater.Updater
 import xx.zerkalo.R
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
+import xx.zerkalo.settings.PeerStore
 import xx.zerkalo.settings.Role
 import xx.zerkalo.settings.ThemeMode
 import xx.zerkalo.settings.currentLanguageTag
@@ -133,7 +134,10 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             onDismiss = { editing = Editing.NONE },
         )
 
-        Editing.PAIRED -> PairedDialog(onDismiss = { editing = Editing.NONE })
+        Editing.PAIRED -> PairedDialog(
+            store = if (role == Role.RECEIVER) PairedDevices.senders else PairedDevices.receivers,
+            onDismiss = { editing = Editing.NONE },
+        )
 
         Editing.THEME -> ChoiceDialog(
             title = stringResource(R.string.setting_theme),
@@ -190,10 +194,10 @@ private fun NameDialog(initial: String, onSave: (String) -> Unit, onDismiss: () 
     )
 }
 
-/** The devices this one is paired with; forgetting one means entering the PIN again. */
+/** The devices this one is paired with in its current role; forgetting one means entering the PIN again. */
 @Composable
-private fun PairedDialog(onDismiss: () -> Unit) {
-    val devices by PairedDevices.devices.collectAsState()
+private fun PairedDialog(store: PeerStore, onDismiss: () -> Unit) {
+    val devices by store.devices.collectAsState()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.setting_paired)) },
@@ -203,7 +207,7 @@ private fun PairedDialog(onDismiss: () -> Unit) {
                 devices.forEach { device ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(device.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        FilledTonalButton(onClick = { PairedDevices.forget(device.id) }) {
+                        FilledTonalButton(onClick = { store.forget(device.id) }) {
                             Text(stringResource(R.string.forget), maxLines = 1)
                         }
                     }

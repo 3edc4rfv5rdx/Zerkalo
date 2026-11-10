@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -46,6 +47,8 @@ import xx.zerkalo.net.isValidPin
 import xx.zerkalo.sender.SenderModel
 import xx.zerkalo.sender.SenderService
 import xx.zerkalo.sender.SenderStatus
+import xx.zerkalo.sender.receiverRows
+import xx.zerkalo.settings.PairedDevices
 
 /** The phone's screen: the receivers around, and the connection to one of them. */
 @Composable
@@ -55,6 +58,8 @@ fun SenderScreen(model: SenderModel) {
         onStopOrDispose { model.stopDiscovery() }
     }
     val found by model.found.collectAsState()
+    val remembered by PairedDevices.receivers.devices.collectAsState()
+    val rows = remember(found, remembered) { receiverRows(found, remembered) }
     val status by model.status.collectAsState()
     var enteringAddress by rememberSaveable { mutableStateOf(false) }
 
@@ -100,10 +105,10 @@ fun SenderScreen(model: SenderModel) {
                 Text("${stringResource(R.string.connecting)}: ${current.name}", style = MaterialTheme.typography.titleLarge)
             }
             else -> {
-                if (found.isEmpty()) {
+                if (rows.isEmpty()) {
                     Text(stringResource(R.string.searching), style = MaterialTheme.typography.titleLarge)
                 }
-                found.forEach { receiver ->
+                rows.forEach { receiver ->
                     Column(
                         Modifier.fillMaxWidth().clickable { model.connect(receiver) }.padding(vertical = 10.dp),
                     ) {

@@ -14,20 +14,18 @@ import xx.zerkalo.toHex
 class PairedDevice(val id: String, val name: String, val host: String, val token: ByteArray)
 
 /**
- * The paired devices, one preference each: the id as the key, the token, host and
- * name as the value, the name last because it alone can hold any character.
- * Call [load] once before use. Network threads write here too, hence the locking.
+ * One list of paired devices, one preference each: the id as the key, the token, host
+ * and name as the value, the name last because it alone can hold any character.
+ * Network threads write here too, hence the locking.
  */
-object PairedDevices : TokenStore {
-    private const val PREFS = "zerkalo_paired"
-
+class PeerStore(private val prefsName: String) : TokenStore {
     private lateinit var prefs: SharedPreferences
     private val _devices = MutableStateFlow<List<PairedDevice>>(emptyList())
     val devices: StateFlow<List<PairedDevice>> = _devices.asStateFlow()
 
     @Synchronized
     fun load(context: Context) {
-        prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs = context.applicationContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         _devices.value = prefs.all.mapNotNull { (id, value) -> parse(id, value as? String) }.sorted()
     }
 
@@ -63,5 +61,26 @@ object PairedDevices : TokenStore {
     fun forget(id: String) {
         prefs.edit { remove(id) }
         _devices.value = _devices.value.filterNot { it.id == id }
+    }
+}
+
+/**
+ * The devices paired in each direction. Two lists and not one with a flag: a device can
+ * serve in both roles, with a different token each way. Call [load] once before use.
+ */
+object PairedDevices {
+    /** Senders this device has let in, when it is a receiver. */
+    val senders = PeerStore("zerkalo_senders")
+
+    /** Receivers this device has connected to, when it is a sender. */
+    val receivers = PeerStore("zerkalo_receivers")
+
+    /** The one list both directions used to share; which entry was which cannot be told. */
+    private const val OLD_PREFS = "zerkalo_paired"
+
+    fun load(context: Context) {
+        context.applicationContext.deleteSharedPreferences(OLD_PREFS)
+        senders.load(context)
+        receivers.load(context)
     }
 }
