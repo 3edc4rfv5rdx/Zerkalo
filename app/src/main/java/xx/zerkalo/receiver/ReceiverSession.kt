@@ -50,13 +50,15 @@ class ReceiverSession(
     private val sendReady: (Int) -> Unit,
     private val sendKeyframeRequest: () -> Unit,
     private val onVideoSize: (Int, Int) -> Unit,
+    audioAutoSync: Boolean,
+    audioOffsetMs: Int,
 ) {
     /** A decoder setup: a new instance whenever the configuration or the surface changes. */
     private class Target(val config: ControlMessage.Config, val surface: Surface)
 
     private val frames = ArrayBlockingQueue<AssembledFrame>(DECODER_QUEUE_FRAMES)
     private val clock = PlayoutClock()
-    private val audio = AudioPlayer(clock)
+    private val audio = AudioPlayer(clock, audioAutoSync, audioOffsetMs)
 
     @Volatile
     private var stopped = false

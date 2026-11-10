@@ -100,6 +100,8 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
             sendReady = { configId -> owner.send(ControlMessage.Ready(configId)) },
             sendKeyframeRequest = { owner.send(ControlMessage.KeyframeRequest) },
             onVideoSize = { width, height -> update { copy(videoWidth = width, videoHeight = height) } },
+            audioAutoSync = AppSettings.audioAutoSync.value,
+            audioOffsetMs = AppSettings.audioOffsetMs.value,
         )
         created.setSurface(surface)
         session = created

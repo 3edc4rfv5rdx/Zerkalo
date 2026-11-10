@@ -9,6 +9,7 @@ import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import xx.zerkalo.AUDIO_OFFSET_MAX_MS
 import xx.zerkalo.ID_SIZE
 import xx.zerkalo.parseHex
 import xx.zerkalo.toHex
@@ -46,6 +47,8 @@ object AppSettings {
     private const val KEY_VIDEO_CODEC = "video_codec"
     private const val KEY_FRAME_RATE = "frame_rate"
     private const val KEY_QUALITY = "quality"
+    private const val KEY_AUDIO_AUTO_SYNC = "audio_auto_sync"
+    private const val KEY_AUDIO_OFFSET = "audio_offset_ms"
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -66,6 +69,14 @@ object AppSettings {
     private val _quality = MutableStateFlow(Quality.MEDIUM)
     val quality: StateFlow<Quality> = _quality.asStateFlow()
 
+    /** Whether the receiver measures how long its sound takes to reach the speaker. */
+    private val _audioAutoSync = MutableStateFlow(true)
+    val audioAutoSync: StateFlow<Boolean> = _audioAutoSync.asStateFlow()
+
+    /** Moves the sound by hand: above zero later, below zero earlier. */
+    private val _audioOffsetMs = MutableStateFlow(0)
+    val audioOffsetMs: StateFlow<Int> = _audioOffsetMs.asStateFlow()
+
     fun load(context: Context) {
         val prefs = prefs(context)
         _themeMode.value = enumOr(prefs.getString(KEY_THEME, null), ThemeMode.SYSTEM)
@@ -74,6 +85,8 @@ object AppSettings {
         _videoCodec.value = enumOr(prefs.getString(KEY_VIDEO_CODEC, null), VideoCodec.H264)
         _frameRate.value = enumOr(prefs.getString(KEY_FRAME_RATE, null), FrameRate.STANDARD)
         _quality.value = enumOr(prefs.getString(KEY_QUALITY, null), Quality.MEDIUM)
+        _audioAutoSync.value = prefs.getBoolean(KEY_AUDIO_AUTO_SYNC, true)
+        _audioOffsetMs.value = prefs.getInt(KEY_AUDIO_OFFSET, 0).coerceIn(-AUDIO_OFFSET_MAX_MS, AUDIO_OFFSET_MAX_MS)
     }
 
     /** This device's id, made once and kept, so a peer still knows it after an IP change. */
@@ -117,6 +130,17 @@ object AppSettings {
     fun setQuality(context: Context, quality: Quality) {
         _quality.value = quality
         prefs(context).edit { putString(KEY_QUALITY, quality.name) }
+    }
+
+    fun setAudioAutoSync(context: Context, enabled: Boolean) {
+        _audioAutoSync.value = enabled
+        prefs(context).edit { putBoolean(KEY_AUDIO_AUTO_SYNC, enabled) }
+    }
+
+    fun setAudioOffsetMs(context: Context, offset: Int) {
+        val clean = offset.coerceIn(-AUDIO_OFFSET_MAX_MS, AUDIO_OFFSET_MAX_MS)
+        _audioOffsetMs.value = clean
+        prefs(context).edit { putInt(KEY_AUDIO_OFFSET, clean) }
     }
 
     /** What a mirroring session starting now should use. */

@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.updater.Updater
+import xx.zerkalo.AUDIO_OFFSET_STEP_MS
 import xx.zerkalo.R
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
@@ -61,6 +62,8 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
     val videoCodec by AppSettings.videoCodec.collectAsState()
     val frameRate by AppSettings.frameRate.collectAsState()
     val quality by AppSettings.quality.collectAsState()
+    val audioAutoSync by AppSettings.audioAutoSync.collectAsState()
+    val audioOffsetMs by AppSettings.audioOffsetMs.collectAsState()
 
     val systemLabel = stringResource(R.string.language_system)
     val languages = remember(context, systemLabel) { supportedLanguages(context, systemLabel) }
@@ -105,6 +108,14 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 }
                 HorizontalDivider()
             }
+            if (role == Role.RECEIVER) {
+                SwitchRow(stringResource(R.string.setting_audio_auto_sync), audioAutoSync) {
+                    AppSettings.setAudioAutoSync(context, it)
+                }
+                HorizontalDivider()
+                AudioOffsetRow(audioOffsetMs) { AppSettings.setAudioOffsetMs(context, it) }
+                HorizontalDivider()
+            }
             SettingRow(stringResource(R.string.setting_theme), stringResource(themeMode.labelRes())) {
                 editing = Editing.THEME
             }
@@ -113,19 +124,9 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 editing = Editing.LANGUAGE
             }
             HorizontalDivider()
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.setting_update_check),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(checked = updateCheck, onCheckedChange = {
-                    updateCheck = it
-                    Updater.setEnabled(context, it)
-                })
+            SwitchRow(stringResource(R.string.setting_update_check), updateCheck) {
+                updateCheck = it
+                Updater.setEnabled(context, it)
             }
             HorizontalDivider()
             SettingRow(stringResource(R.string.about), "", onAbout)
@@ -232,6 +233,40 @@ private fun SettingRow(label: String, value: String, onClick: () -> Unit) {
     ) {
         Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** Buttons and not a slider: a TV remote gets one exact step per press. */
+@Composable
+private fun AudioOffsetRow(offset: Int, onChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.setting_audio_offset),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.weight(1f),
+        )
+        FilledTonalButton(onClick = { onChange(offset - AUDIO_OFFSET_STEP_MS) }) { Text("\u2212", maxLines = 1) }
+        Text(
+            text = "${if (offset > 0) "+" else ""}$offset ${stringResource(R.string.unit_ms)}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+        FilledTonalButton(onClick = { onChange(offset + AUDIO_OFFSET_STEP_MS) }) { Text("+", maxLines = 1) }
     }
 }
 

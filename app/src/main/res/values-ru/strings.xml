@@ -48,4 +48,7 @@
     <string name="quality_high">Высокое</string>
     <string name="minimize">Свернуть</string>
     <string name="exit">Выход</string>
+    <string name="setting_audio_auto_sync">Автоподстройка звука</string>
+    <string name="setting_audio_offset">Сдвиг звука</string>
+    <string name="unit_ms">мс</string>
 </resources>

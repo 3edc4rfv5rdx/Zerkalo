@@ -2,16 +2,20 @@ package xx.zerkalo.receiver
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.util.Log
 import xx.zerkalo.AUDIO_MAX_LATE_MS
+import xx.zerkalo.AUDIO_MAX_QUEUE_MS
 import xx.zerkalo.AUDIO_QUEUE_PACKETS
 import xx.zerkalo.net.AudioPacket
 import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.video.PlayoutClock
+import xx.zerkalo.video.audioWaitMs
 import xx.zerkalo.video.monotonicMs
+import xx.zerkalo.video.outputQueueMs
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -27,13 +31,14 @@ private const val BYTES_PER_SAMPLE = 2
 private const val TRACK_BUFFER_MS = 60
 private const val STATS_INTERVAL_MS = 2_000L
 private const val MAX_WAIT_MS = 500L
+private const val NANOS_PER_MS = 1_000_000L
 
 /**
  * Plays the sender's sound on the picture's clock, so the two stay together. Takes its
  * timing from frames of video only: sound arrives sooner than a picture does, and would
  * otherwise eat up the delay the picture needs.
  */
-class AudioPlayer(private val clock: PlayoutClock) {
+class AudioPlayer(private val clock: PlayoutClock, private val autoSync: Boolean, private val offsetMs: Int) {
     private val packets = ArrayBlockingQueue<AudioPacket>(AUDIO_QUEUE_PACKETS)
 
     @Volatile
@@ -150,8 +155,9 @@ class AudioPlayer(private val clock: PlayoutClock) {
         // A track stays silent until its buffer has been full once, so it is filled at the
         // start: otherwise that wait would become a lasting delay of the whole sound.
         val silence = ByteArray(track.bufferSizeInFrames * bytesPerFrame)
-        track.write(silence, 0, silence.size)
+        var writtenBytes = maxOf(track.write(silence, 0, silence.size), 0).toLong()
         val bufferMs = track.bufferSizeInFrames * 1000L / current.sampleRate
+        val stamp = AudioTimestamp()
         val info = MediaCodec.BufferInfo()
         var pcm = ByteArray(0)
         while (!stopped) {
@@ -165,7 +171,10 @@ class AudioPlayer(private val clock: PlayoutClock) {
                     if (pcm.size < info.size) pcm = ByteArray(info.size)
                     buffer.position(info.offset)
                     buffer.get(pcm, 0, info.size)
-                    if (waitForTurn(info.presentationTimeUs / US_PER_MS, bufferMs)) track.write(pcm, 0, info.size)
+                    val queueMs = measuredQueueMs(track, stamp, writtenBytes / bytesPerFrame, current.sampleRate) ?: bufferMs
+                    if (waitForTurn(info.presentationTimeUs / US_PER_MS, queueMs)) {
+                        writtenBytes += maxOf(track.write(pcm, 0, info.size), 0)
+                    }
                 }
                 decoder.releaseOutputBuffer(index, false)
             }
@@ -185,14 +194,21 @@ class AudioPlayer(private val clock: PlayoutClock) {
         val now = monotonicMs()
         if (now - lastStats < STATS_INTERVAL_MS) return
         lastStats = now
-        Log.i(TAG, "wait=$wait queue=$queueMs dropped=$dropped")
+        Log.i(TAG, "wait=$wait queue=$queueMs dropped=$dropped auto=$autoSync offset=$offsetMs")
         dropped = 0
+    }
+
+    /** How long sound written now takes to be heard, when the system can say and is asked to. */
+    private fun measuredQueueMs(track: AudioTrack, stamp: AudioTimestamp, writtenFrames: Long, sampleRate: Int): Long? {
+        if (!autoSync || !track.getTimestamp(stamp)) return null
+        val queue = outputQueueMs(writtenFrames, stamp.framePosition, stamp.nanoTime / NANOS_PER_MS, monotonicMs(), sampleRate)
+        return queue.takeIf { it <= AUDIO_MAX_QUEUE_MS }
     }
 
     /** Sleeps until the sound stamped [ptsMs] should be written; false if it should be dropped. */
     private fun waitForTurn(ptsMs: Long, queueMs: Long): Boolean {
         val target = clock.targetMs(ptsMs) ?: return false
-        val wait = target - queueMs - monotonicMs()
+        val wait = audioWaitMs(target, monotonicMs(), queueMs, offsetMs)
         logStats(wait, queueMs)
         if (wait < -AUDIO_MAX_LATE_MS) {
             dropped++

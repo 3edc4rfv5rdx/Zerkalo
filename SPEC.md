@@ -217,6 +217,9 @@ Sound is captured, encoded and sent beside the video, with the same protocol ver
   apart by the first byte, so no second socket is needed.
 - **Sync.** `ptsMs` of video and sound count from the same session clock, and `PlayoutClock` is
   written to be shared by both streams, not for video alone.
+- **Output delay.** A block is written when `now + output queue + 60 ms codec correction` reaches its
+  moment on the picture's clock. The queue is measured with `AudioTrack.getTimestamp`, and this can
+  be turned off; a manual offset of ±80 ms moves the sound on top of it.
 - **Capture.** `AudioPlaybackCapture` works from the same `MediaProjection` object, so there is no
   second permission request. It needs Android 10+ on the sender (the A36 qualifies), the
   `RECORD_AUDIO` permission and foreground service type `mediaProjection|microphone`. A TV box on
@@ -231,6 +234,8 @@ Sound is captured, encoded and sent beside the video, with the same protocol ver
 | Codec | sender | H.264 (default), H.265 |
 | Frames per second | sender | 30 (default), 60 |
 | Quality | sender | low, medium (default), high |
+| Automatic sound sync | receiver | on (default), off |
+| Sound offset | receiver | −80 to +80 ms in steps of 10, default 0, above zero is later |
 | Device name | both | `Build.MODEL` by default |
 | Remembered devices | both | list with removal |
 | Language, theme | both | as in the other apps |

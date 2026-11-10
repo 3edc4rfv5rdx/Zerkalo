@@ -48,4 +48,7 @@
     <string name="quality_high">High</string>
     <string name="minimize">Minimize</string>
     <string name="exit">Exit</string>
+    <string name="setting_audio_auto_sync">Automatic sound sync</string>
+    <string name="setting_audio_offset">Sound offset</string>
+    <string name="unit_ms">ms</string>
 </resources>

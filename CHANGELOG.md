@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: The receiver can match sound to the picture by itself, can be told not to, and takes a manual offset of up to 80 ms.
 - N: The sound apps play goes to the receiver along with the picture.
 - N: The sender's screen no longer goes off by timeout while mirroring; it may still dim.
 - I: 23-ToUpdate.sh publishes the manifest the in-app updater reads.

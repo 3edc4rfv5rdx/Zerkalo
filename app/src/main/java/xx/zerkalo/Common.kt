@@ -74,6 +74,14 @@ const val AUDIO_BIT_RATE = 160_000
 const val AUDIO_READ_BYTES = 4096
 const val AUDIO_QUEUE_PACKETS = 32
 
+/** Sound reaches the ear this much later than its timestamp says: AAC's own delay and the capture path. */
+const val AUDIO_CODEC_ADVANCE_MS = 60L
+
+/** A measured output queue longer than this is a bad reading, not a real delay. */
+const val AUDIO_MAX_QUEUE_MS = 500L
+const val AUDIO_OFFSET_MAX_MS = 80
+const val AUDIO_OFFSET_STEP_MS = 10
+
 /**
  * Only sound this far behind the picture is dropped. A smaller lag is played as it is:
  * the output path can take longer than the picture waits, and dropping would mean silence.
