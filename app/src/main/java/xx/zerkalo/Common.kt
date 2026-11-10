@@ -1,7 +1,7 @@
 package xx.zerkalo
 
 // Everything both ends of a connection must agree on. Free of the Android framework,
-// so the protocol stays covered by plain JVM tests. SPEC.ru.md describes the wire format.
+// so the protocol stays covered by plain JVM tests. SPEC.md describes the wire format.
 
 const val PROTOCOL_VERSION = 1
 

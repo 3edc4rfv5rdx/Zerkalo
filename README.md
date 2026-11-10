@@ -70,7 +70,7 @@ The numbered scripts in the project root are the individual build and release st
 `AGENTS.md` describes how they fit together. The APK is written to
 `OUT/zerkalo-<version>-universal.apk`. Release signing reads `~/.my-safe/key.properties`.
 
-The design and the network protocol are specified in [SPEC.ru.md](SPEC.ru.md), in Russian.
+The design and the network protocol are specified in [SPEC.md](SPEC.md).
 
 ## License
 

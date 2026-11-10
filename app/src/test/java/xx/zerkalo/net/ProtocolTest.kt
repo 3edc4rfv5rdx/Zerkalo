@@ -30,7 +30,7 @@ class ProtocolTest {
 
     private fun read(bytes: ByteArray): ControlMessage = readControl(DataInputStream(ByteArrayInputStream(bytes)))
 
-    // ---------- Golden bytes: the layout in SPEC.ru.md, written out by hand ----------
+    // ---------- Golden bytes: the layout in SPEC.md, written out by hand ----------
 
     @Test
     fun helloMatchesSpec() {
