@@ -46,4 +46,6 @@
     <string name="quality_low">Низька</string>
     <string name="quality_medium">Середня</string>
     <string name="quality_high">Висока</string>
+    <string name="minimize">Згорнути</string>
+    <string name="exit">Вихід</string>
 </resources>

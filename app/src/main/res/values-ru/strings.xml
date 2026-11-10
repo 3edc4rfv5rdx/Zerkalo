@@ -46,4 +46,6 @@
     <string name="quality_low">Низкое</string>
     <string name="quality_medium">Среднее</string>
     <string name="quality_high">Высокое</string>
+    <string name="minimize">Свернуть</string>
+    <string name="exit">Выход</string>
 </resources>

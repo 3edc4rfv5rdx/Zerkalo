@@ -1,12 +1,14 @@
 package xx.zerkalo.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,6 +36,7 @@ fun App(sender: SenderModel, receiver: ReceiverModel, onAbout: () -> Unit) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
     BackHandler(enabled = screen == Screen.SETTINGS) { screen = Screen.HOME }
 
+    val activity = LocalActivity.current
     val role by AppSettings.role.collectAsState()
     val receiverState by receiver.state.collectAsState()
     // A receiver's session ends with its screen; a sender's has to be ended here.
@@ -55,6 +58,11 @@ fun App(sender: SenderModel, receiver: ReceiverModel, onAbout: () -> Unit) {
                                 screen = Screen.SETTINGS
                             },
                             iconFirst = false,
+                            extra = BarAction(Icons.Filled.Close, stringResource(R.string.exit)) {
+                                // The capture service would outlive the activity otherwise.
+                                sender.disconnect()
+                                activity?.finishAndRemoveTask()
+                            },
                         )
                     }
                     when (role) {

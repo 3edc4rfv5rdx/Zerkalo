@@ -64,11 +64,12 @@ fun ZerkaloTheme(themeMode: ThemeMode, content: @Composable () -> Unit) {
 class BarAction(val icon: ImageVector, val description: String, val onClick: () -> Unit)
 
 /**
- * The title with one icon, before it when [iconFirst] and after it otherwise. The icon
+ * The title with one icon, before it when [iconFirst] and after it otherwise, and
+ * optionally an [extra] icon at the far end. The first icon
  * takes the focus when the bar appears, so a TV remote has somewhere to start from.
  */
 @Composable
-fun TopBar(title: String, action: BarAction, iconFirst: Boolean) {
+fun TopBar(title: String, action: BarAction, iconFirst: Boolean, extra: BarAction? = null) {
     val focus = remember { FocusRequester() }
     val icon = @Composable {
         IconButton(onClick = action.onClick, modifier = Modifier.focusRequester(focus)) {
@@ -86,6 +87,9 @@ fun TopBar(title: String, action: BarAction, iconFirst: Boolean) {
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
         )
         if (!iconFirst) icon()
+        extra?.let {
+            IconButton(onClick = it.onClick) { Icon(it.icon, contentDescription = it.description) }
+        }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
 }

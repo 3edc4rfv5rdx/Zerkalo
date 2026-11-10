@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: An Exit button on both roles, and a full-screen mirroring panel on the sender with a Minimize button.
 - N: The sender's settings choose the codec, H.264 or H.265, the frame rate and the quality.
 - F: A late frame is waited for longer before the stream restarts from a key frame, which means fewer stutters.
 - N: Lost packets are sent again, a broken stream picks up at a new key frame, frames are shown on time, and the picture follows the sender's rotation.
