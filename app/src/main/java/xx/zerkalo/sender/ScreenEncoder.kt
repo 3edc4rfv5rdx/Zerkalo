@@ -7,6 +7,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.projection.MediaProjection
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,9 +15,6 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
 import android.view.Surface
-import xx.zerkalo.CODEC_H264
-import xx.zerkalo.DEFAULT_BIT_RATE
-import xx.zerkalo.DEFAULT_FRAME_RATE
 import xx.zerkalo.KEY_FRAME_INTERVAL_S
 import xx.zerkalo.MAX_DATAGRAM
 import xx.zerkalo.REPEAT_FRAME_AFTER_US
@@ -27,9 +25,14 @@ import xx.zerkalo.net.Nack
 import xx.zerkalo.video.Fragmenter
 import xx.zerkalo.video.RetransmitBuffer
 import xx.zerkalo.video.SentFrame
+import xx.zerkalo.video.StreamOptions
 import xx.zerkalo.video.StreamSize
+import xx.zerkalo.video.VideoCodec
+import xx.zerkalo.video.bitRateOf
 import xx.zerkalo.video.fitStreamSize
+import xx.zerkalo.video.hardwareCodecMask
 import xx.zerkalo.video.mimeOf
+import xx.zerkalo.video.negotiateCodec
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -46,6 +49,8 @@ class ScreenEncoder(
     private val context: Context,
     private val projection: MediaProjection,
     private val channel: ControlChannel,
+    private val receiverCodecs: Int,
+    private val options: StreamOptions,
     private val onFailed: () -> Unit,
 ) {
     /** One encoder instance; a new one comes with every change of the screen's shape. */
@@ -83,6 +88,7 @@ class ScreenEncoder(
     private var configId = 0
     private var frameId = 0L
     private var firstPtsUs = -1L
+    private var videoCodec = VideoCodec.H264
 
     fun start() {
         displays.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
@@ -114,6 +120,7 @@ class ScreenEncoder(
         var active: Active? = null
         try {
             val address = InetAddress.getByName(channel.remoteHost)
+            videoCodec = negotiateCodec(options.codec, hardwareCodecMask(encoder = true), receiverCodecs)
             DatagramSocket().use { socket ->
                 startNackListener(socket, address)
                 val fragmenter = fragmenterFor(socket, address, pause = { Thread.sleep(1) })
@@ -147,8 +154,18 @@ class ScreenEncoder(
         }
     }
 
-    private fun openEncoder(): Active {
-        val mime = mimeOf(CODEC_H264)
+    /** A device can list H.265 and still refuse this size or rate, so H.264 is the way out. */
+    private fun openEncoder(): Active = try {
+        openEncoder(videoCodec)
+    } catch (e: Exception) {
+        if (videoCodec == VideoCodec.H264) throw e
+        Log.w(TAG, "No encoder for $videoCodec, falling back to H.264", e)
+        videoCodec = VideoCodec.H264
+        openEncoder(videoCodec)
+    }
+
+    private fun openEncoder(choice: VideoCodec): Active {
+        val mime = mimeOf(choice.id)
         val created = MediaCodec.createEncoderByType(mime)
         try {
             val capabilities = created.codecInfo.getCapabilitiesForType(mime)
@@ -157,8 +174,12 @@ class ScreenEncoder(
             val size = fitStreamSize(screen.widthPixels, screen.heightPixels, video.widthAlignment, video.heightAlignment)
             val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
                 setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-                setInteger(MediaFormat.KEY_BIT_RATE, DEFAULT_BIT_RATE)
-                setInteger(MediaFormat.KEY_FRAME_RATE, DEFAULT_FRAME_RATE)
+                setInteger(MediaFormat.KEY_BIT_RATE, bitRateOf(options.quality, choice))
+                setInteger(MediaFormat.KEY_FRAME_RATE, options.frameRate.fps)
+                // Without it a 120 Hz screen hands the encoder every frame it draws.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    setFloat(MediaFormat.KEY_MAX_FPS_TO_ENCODER, options.frameRate.fps.toFloat())
+                }
                 setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, KEY_FRAME_INTERVAL_S)
                 setInteger(MediaFormat.KEY_PRIORITY, 0)
                 setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, REPEAT_FRAME_AFTER_US)
@@ -183,16 +204,18 @@ class ScreenEncoder(
         encoder.surface.release()
     }
 
-    private fun createDisplay(encoder: Active): VirtualDisplay = projection.createVirtualDisplay(
-        "zerkalo",
-        encoder.size.width,
-        encoder.size.height,
-        encoder.screen.densityDpi,
-        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-        encoder.surface,
-        null,
-        null,
-    )
+    private fun createDisplay(encoder: Active): VirtualDisplay = checkNotNull(
+        projection.createVirtualDisplay(
+            "zerkalo",
+            encoder.size.width,
+            encoder.size.height,
+            encoder.screen.densityDpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            encoder.surface,
+            null,
+            null,
+        ),
+    ) { "No virtual display" }
 
     private fun fragmenterFor(socket: DatagramSocket, address: InetAddress, pause: () -> Unit): Fragmenter {
         val datagram = DatagramPacket(ByteArray(MAX_DATAGRAM), MAX_DATAGRAM, address, VIDEO_PORT)
@@ -244,7 +267,7 @@ class ScreenEncoder(
                 buffer.get(bytes)
                 if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
                     configId++
-                    channel.send(ControlMessage.Config(configId, CODEC_H264, encoder.size.width, encoder.size.height, bytes))
+                    channel.send(ControlMessage.Config(configId, videoCodec.id, encoder.size.width, encoder.size.height, bytes))
                 } else if (readyConfig == configId) {
                     if (firstPtsUs < 0) firstPtsUs = info.presentationTimeUs
                     val ptsMs = (info.presentationTimeUs - firstPtsUs) / 1000 and PTS_MASK

@@ -51,8 +51,14 @@ const val SESSION_TIMEOUT_MS = 4_000
 
 const val MAX_STREAM_WIDTH = 1920
 const val MAX_STREAM_HEIGHT = 1080
-const val DEFAULT_BIT_RATE = 8_000_000
-const val DEFAULT_FRAME_RATE = 30
+const val BIT_RATE_LOW = 4_000_000
+const val BIT_RATE_MEDIUM = 8_000_000
+const val BIT_RATE_HIGH = 16_000_000
+
+/** H.265 reaches the same picture at about this share of H.264's bit rate. */
+const val H265_BIT_RATE_PERCENT = 65
+const val FRAME_RATE_STANDARD = 30
+const val FRAME_RATE_HIGH = 60
 const val KEY_FRAME_INTERVAL_S = 2
 
 /** Makes the encoder repeat a still picture, so a static photo keeps producing frames. */

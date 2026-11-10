@@ -40,4 +40,10 @@
     <string name="stop">Stop</string>
     <string name="notification_channel">Screen mirroring</string>
     <string name="error_encoder">Could not start capturing the screen</string>
+    <string name="setting_codec">Codec</string>
+    <string name="setting_frame_rate">Frames per second</string>
+    <string name="setting_quality">Quality</string>
+    <string name="quality_low">Low</string>
+    <string name="quality_medium">Medium</string>
+    <string name="quality_high">High</string>
 </resources>

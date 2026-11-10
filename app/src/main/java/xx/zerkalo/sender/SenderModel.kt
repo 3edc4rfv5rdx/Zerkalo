@@ -113,7 +113,7 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
                 is ConnectResult.Connected -> {
                     PairedDevices.receivers.save(result.receiverId, result.key, target.name, target.host)
                     pending = null
-                    SenderSession.attach(result.channel, target.name)
+                    SenderSession.attach(result.channel, target.name, result.codecs)
                 }
                 ConnectResult.NeedPin -> {
                     PairedDevices.receivers.find(target.id, target.host)?.let { PairedDevices.receivers.forget(it.id) }

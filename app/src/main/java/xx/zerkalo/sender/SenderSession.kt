@@ -35,6 +35,11 @@ object SenderSession {
     var channel: ControlChannel? = null
         private set
 
+    /** The mask of codecs the connected receiver can decode. */
+    @Volatile
+    var receiverCodecs = 0
+        private set
+
     /** Told which configuration the receiver is ready for. */
     @Volatile
     var onReady: ((Int) -> Unit)? = null
@@ -55,7 +60,8 @@ object SenderSession {
         _status.value = status
     }
 
-    fun attach(connected: ControlChannel, name: String) {
+    fun attach(connected: ControlChannel, name: String, codecs: Int) {
+        receiverCodecs = codecs
         channel = connected
         _status.value = SenderStatus.Connected(name)
         connected.startSession(

@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import xx.zerkalo.ID_SIZE
 import xx.zerkalo.parseHex
 import xx.zerkalo.toHex
+import xx.zerkalo.video.FrameRate
+import xx.zerkalo.video.Quality
+import xx.zerkalo.video.StreamOptions
+import xx.zerkalo.video.VideoCodec
 import java.security.SecureRandom
 
 /** Light/dark override; SYSTEM follows the device setting. */
@@ -39,6 +43,9 @@ object AppSettings {
     private const val KEY_ROLE = "role"
     private const val KEY_DEVICE_ID = "device_id"
     private const val KEY_DEVICE_NAME = "device_name"
+    private const val KEY_VIDEO_CODEC = "video_codec"
+    private const val KEY_FRAME_RATE = "frame_rate"
+    private const val KEY_QUALITY = "quality"
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -50,11 +57,23 @@ object AppSettings {
     private val _deviceName = MutableStateFlow(Build.MODEL.orEmpty())
     val deviceName: StateFlow<String> = _deviceName.asStateFlow()
 
+    private val _videoCodec = MutableStateFlow(VideoCodec.H264)
+    val videoCodec: StateFlow<VideoCodec> = _videoCodec.asStateFlow()
+
+    private val _frameRate = MutableStateFlow(FrameRate.STANDARD)
+    val frameRate: StateFlow<FrameRate> = _frameRate.asStateFlow()
+
+    private val _quality = MutableStateFlow(Quality.MEDIUM)
+    val quality: StateFlow<Quality> = _quality.asStateFlow()
+
     fun load(context: Context) {
         val prefs = prefs(context)
         _themeMode.value = enumOr(prefs.getString(KEY_THEME, null), ThemeMode.SYSTEM)
         _role.value = enumOr(prefs.getString(KEY_ROLE, null), defaultRole(context))
         _deviceName.value = prefs.getString(KEY_DEVICE_NAME, null) ?: Build.MODEL.orEmpty()
+        _videoCodec.value = enumOr(prefs.getString(KEY_VIDEO_CODEC, null), VideoCodec.H264)
+        _frameRate.value = enumOr(prefs.getString(KEY_FRAME_RATE, null), FrameRate.STANDARD)
+        _quality.value = enumOr(prefs.getString(KEY_QUALITY, null), Quality.MEDIUM)
     }
 
     /** This device's id, made once and kept, so a peer still knows it after an IP change. */
@@ -84,6 +103,24 @@ object AppSettings {
         _role.value = role
         prefs(context).edit { putString(KEY_ROLE, role.name) }
     }
+
+    fun setVideoCodec(context: Context, codec: VideoCodec) {
+        _videoCodec.value = codec
+        prefs(context).edit { putString(KEY_VIDEO_CODEC, codec.name) }
+    }
+
+    fun setFrameRate(context: Context, rate: FrameRate) {
+        _frameRate.value = rate
+        prefs(context).edit { putString(KEY_FRAME_RATE, rate.name) }
+    }
+
+    fun setQuality(context: Context, quality: Quality) {
+        _quality.value = quality
+        prefs(context).edit { putString(KEY_QUALITY, quality.name) }
+    }
+
+    /** What a mirroring session starting now should use. */
+    fun streamOptions(): StreamOptions = StreamOptions(_videoCodec.value, _frameRate.value, _quality.value)
 
     /**
      * The per-app language below API 33, where the platform does not keep one.

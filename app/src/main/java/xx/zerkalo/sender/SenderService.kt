@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import xx.zerkalo.MainActivity
 import xx.zerkalo.R
+import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.localizedContext
 import xx.zerkalo.video.acquireLowLatencyWifi
 
@@ -82,7 +83,14 @@ class SenderService : Service() {
         captured.registerCallback(projectionCallback, mainHandler)
         wifiLock = acquireLowLatencyWifi(this)
 
-        val started = ScreenEncoder(this, captured, channel, onFailed = { SenderSession.fail(R.string.error_encoder) })
+        val started = ScreenEncoder(
+            this,
+            captured,
+            channel,
+            SenderSession.receiverCodecs,
+            AppSettings.streamOptions(),
+            onFailed = { SenderSession.fail(R.string.error_encoder) },
+        )
         encoder = started
         SenderSession.onReady = started::onReady
         SenderSession.onKeyframeRequest = started::requestKeyFrame

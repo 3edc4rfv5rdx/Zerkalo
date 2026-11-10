@@ -44,9 +44,12 @@ import xx.zerkalo.settings.ThemeMode
 import xx.zerkalo.settings.currentLanguageTag
 import xx.zerkalo.settings.setLanguageTag
 import xx.zerkalo.settings.supportedLanguages
+import xx.zerkalo.video.FrameRate
+import xx.zerkalo.video.Quality
+import xx.zerkalo.video.VideoCodec
 
 /** Which editor is open; only one can be at a time. */
-private enum class Editing { NONE, ROLE, NAME, PAIRED, THEME, LANGUAGE }
+private enum class Editing { NONE, ROLE, NAME, PAIRED, CODEC, FRAME_RATE, QUALITY, THEME, LANGUAGE }
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
@@ -55,6 +58,9 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
     val role by AppSettings.role.collectAsState()
     val themeMode by AppSettings.themeMode.collectAsState()
     val deviceName by AppSettings.deviceName.collectAsState()
+    val videoCodec by AppSettings.videoCodec.collectAsState()
+    val frameRate by AppSettings.frameRate.collectAsState()
+    val quality by AppSettings.quality.collectAsState()
 
     val systemLabel = stringResource(R.string.language_system)
     val languages = remember(context, systemLabel) { supportedLanguages(context, systemLabel) }
@@ -85,6 +91,20 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 editing = Editing.PAIRED
             }
             HorizontalDivider()
+            if (role == Role.SENDER) {
+                SettingRow(stringResource(R.string.setting_codec), videoCodec.label) {
+                    editing = Editing.CODEC
+                }
+                HorizontalDivider()
+                SettingRow(stringResource(R.string.setting_frame_rate), frameRate.fps.toString()) {
+                    editing = Editing.FRAME_RATE
+                }
+                HorizontalDivider()
+                SettingRow(stringResource(R.string.setting_quality), stringResource(quality.labelRes())) {
+                    editing = Editing.QUALITY
+                }
+                HorizontalDivider()
+            }
             SettingRow(stringResource(R.string.setting_theme), stringResource(themeMode.labelRes())) {
                 editing = Editing.THEME
             }
@@ -137,6 +157,42 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
         Editing.PAIRED -> PairedDialog(
             store = if (role == Role.RECEIVER) PairedDevices.senders else PairedDevices.receivers,
             onDismiss = { editing = Editing.NONE },
+        )
+
+        Editing.CODEC -> ChoiceDialog(
+            title = stringResource(R.string.setting_codec),
+            options = VideoCodec.entries,
+            selected = videoCodec,
+            label = { it.label },
+            onDismiss = { editing = Editing.NONE },
+            onPick = {
+                AppSettings.setVideoCodec(context, it)
+                editing = Editing.NONE
+            },
+        )
+
+        Editing.FRAME_RATE -> ChoiceDialog(
+            title = stringResource(R.string.setting_frame_rate),
+            options = FrameRate.entries,
+            selected = frameRate,
+            label = { it.fps.toString() },
+            onDismiss = { editing = Editing.NONE },
+            onPick = {
+                AppSettings.setFrameRate(context, it)
+                editing = Editing.NONE
+            },
+        )
+
+        Editing.QUALITY -> ChoiceDialog(
+            title = stringResource(R.string.setting_quality),
+            options = Quality.entries,
+            selected = quality,
+            label = { stringResource(it.labelRes()) },
+            onDismiss = { editing = Editing.NONE },
+            onPick = {
+                AppSettings.setQuality(context, it)
+                editing = Editing.NONE
+            },
         )
 
         Editing.THEME -> ChoiceDialog(
@@ -257,6 +313,12 @@ private fun <T> ChoiceDialog(
             FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
         },
     )
+}
+
+private fun Quality.labelRes(): Int = when (this) {
+    Quality.LOW -> R.string.quality_low
+    Quality.MEDIUM -> R.string.quality_medium
+    Quality.HIGH -> R.string.quality_high
 }
 
 private fun ThemeMode.labelRes(): Int = when (this) {

@@ -40,4 +40,10 @@
     <string name="stop">Стоп</string>
     <string name="notification_channel">Трансляція екрана</string>
     <string name="error_encoder">Не вдалося почати захоплення екрана</string>
+    <string name="setting_codec">Кодек</string>
+    <string name="setting_frame_rate">Кадрів за секунду</string>
+    <string name="setting_quality">Якість</string>
+    <string name="quality_low">Низька</string>
+    <string name="quality_medium">Середня</string>
+    <string name="quality_high">Висока</string>
 </resources>
