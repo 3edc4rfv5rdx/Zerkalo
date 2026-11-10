@@ -32,6 +32,10 @@
             android:fillColor="@color/ic_launcher_background"
             android:strokeColor="#FFFFFF"
             android:strokeWidth="3.5"
-            android:pathData="M30,46h10a3,3 0,0 1,3 3v26a3,3 0,0 1,-3 3h-10a3,3 0,0 1,-3 -3v-26a3,3 0,0 1,3 -3z" />
+            android:pathData="M30,46h14a3,3 0,0 1,3 3v26a3,3 0,0 1,-3 3h-14a3,3 0,0 1,-3 -3v-26a3,3 0,0 1,3 -3z" />
+        <!-- Play mark on the phone. -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M33,57l9,5l-9,5z" />
     </group>
 </vector>
