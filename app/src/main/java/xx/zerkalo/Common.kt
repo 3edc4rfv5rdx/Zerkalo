@@ -68,9 +68,13 @@ const val RETRANSMIT_FRAMES = 32
 /** Silence on an unfinished frame before its holes count as lost and not as still on the way. */
 const val NACK_DELAY_MS = 10L
 const val NACK_INTERVAL_MS = 20L
-const val MAX_NACKS_PER_FRAME = 3
-/** How long a frame may stay unfinished before it is given up on. */
-const val FRAME_DEADLINE_MS = 80L
+const val MAX_NACKS_PER_FRAME = 8
+
+/**
+ * How long a frame may stay unfinished before it is given up on. Generous on purpose: a frame
+ * that comes late costs one hiccup, and giving up costs a freeze until the next key frame.
+ */
+const val FRAME_DEADLINE_MS = 250L
 const val KEYFRAME_REQUEST_INTERVAL_MS = 500L
 const val PLAYOUT_DELAY_MS = 80L
 const val PLAYOUT_WINDOW_MS = 2_000L

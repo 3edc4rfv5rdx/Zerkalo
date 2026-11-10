@@ -25,6 +25,7 @@ import java.net.SocketAddress
 import java.net.SocketTimeoutException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 private const val TAG = "ReceiverSession"
@@ -36,6 +37,7 @@ private const val FRAME_POLL_MS = 5L
 private const val CSD_INPUT_TIMEOUT_US = 1_000_000L
 private const val SURFACE_RELEASE_WAIT_MS = 500L
 private const val SURFACE_RELEASE_STEP_MS = 5L
+private const val STATS_INTERVAL_MS = 2_000L
 
 /**
  * One sender's video: reads its datagrams, puts frames together and decodes them onto
@@ -71,6 +73,14 @@ class ReceiverSession(
 
     @Volatile
     private var socket: DatagramSocket? = null
+
+    // For telling a bad network from a slow source in the log. The receive thread's own:
+    private var readyFrames = 0
+    private var lostFrames = 0
+    private var nackedFragments = 0
+
+    /** Frames that came out of the decoder after their moment had passed. */
+    private val lateFrames = AtomicInteger()
 
     private var receiveThread: Thread? = null
     private var decodeThread: Thread? = null
@@ -129,6 +139,7 @@ class ReceiverSession(
             var assemblerConfig = -1
             var replyTo: SocketAddress? = null
             var lastKeyRequest = 0L
+            var lastStats = nowMs()
             while (!stopped) {
                 try {
                     packet.length = buffer.size
@@ -158,6 +169,10 @@ class ReceiverSession(
                     lastKeyRequest = now
                     sendKeyframeRequest()
                 }
+                if (now - lastStats >= STATS_INTERVAL_MS) {
+                    lastStats = now
+                    logStats()
+                }
             }
         }
     }
@@ -166,8 +181,9 @@ class ReceiverSession(
         while (true) {
             when (val step = assembler.next(now)) {
                 FrameAssembler.Step.Idle -> return
-                FrameAssembler.Step.Lost -> Unit
+                FrameAssembler.Step.Lost -> lostFrames++
                 is FrameAssembler.Step.Ready -> {
+                    readyFrames++
                     clock.onFrame(step.frame.ptsMs, now)
                     // A full queue means the decoder is behind, and a dropped frame breaks
                     // the chain just as a lost one does.
@@ -180,12 +196,20 @@ class ReceiverSession(
     private fun sendNacks(socket: DatagramSocket, to: SocketAddress, assembler: FrameAssembler, now: Long) {
         try {
             assembler.nacks(now).forEach { nack ->
+                nackedFragments += nack.fragments.size
                 val bytes = nack.encode()
                 socket.send(DatagramPacket(bytes, bytes.size, to))
             }
         } catch (ignored: IOException) {
             // A request that does not get through is the same as one whose answer is lost.
         }
+    }
+
+    private fun logStats() {
+        Log.i(TAG, "frames=$readyFrames lost=$lostFrames nacked=$nackedFragments late=${lateFrames.getAndSet(0)}")
+        readyFrames = 0
+        lostFrames = 0
+        nackedFragments = 0
     }
 
     private fun nowMs(): Long = System.nanoTime() / NANOS_PER_MS
@@ -291,7 +315,9 @@ class ReceiverSession(
                 } else {
                     // A timestamp in the past shows at once; one far ahead would mean a clock
                     // gone wrong, and must not freeze the picture.
-                    val shown = minOf(target, nowMs() + MAX_RENDER_AHEAD_MS)
+                    val now = nowMs()
+                    if (target < now) lateFrames.incrementAndGet()
+                    val shown = minOf(target, now + MAX_RENDER_AHEAD_MS)
                     decoder.releaseOutputBuffer(index, shown * NANOS_PER_MS)
                 }
             } else if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
