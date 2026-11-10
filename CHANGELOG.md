@@ -1,0 +1,15 @@
+# CHANGELOG
+> Newest entries on top.
+> N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
+
+## Unreleased
+- N: App skeleton with a receiver or sender role in the settings, theme, language, updater and About.
+- I: The version is major.minor.build — the date left it — so the tag is v0.1.1 and an artifact <project>-0.1.1-arm64-v8a.apk, each number written once; 20-MakeTag.sh puts the build date after the tag in the CHANGELOG heading, for the reader
+- E: The version line looks only at release tags, so a tag like "duplex" can no longer answer which line the last release went out on
+- I: Lint reruns instead of reprinting an up-to-date report, and says when the report was written
+- I: The previous run's test results are cleared before a run, and a failed test prints its name and the first lines of its message
+- I: The clean-tree check refuses an untracked file too, so nothing can go into the APK without going into the tag
+- I: The .apkx helper is 99-CopyToAPKX.sh, the number it carries in the older projects
+- I: One CHANGELOG legend across every project here — N/E/F/R/I, newest on top, the type letter always followed by a colon
+- I: One name for every artifact: `<project>-<version>-<build>-<abi>.apk`, and the tag it goes out under is `v<version>-<build>`.
+- I: The build scripts are in place: 97-InitProject.sh names a copy of the template after the folder it is in, and the blue the launcher plate is painted in is named once, in 99-project.conf.

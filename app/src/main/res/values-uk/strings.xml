@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Дзеркало</string>
+    <string name="settings">Налаштування</string>
+    <string name="about">Про програму</string>
+    <string name="back">Назад</string>
+    <string name="cancel">Скасувати</string>
+    <string name="setting_role">Роль пристрою</string>
+    <string name="role_receiver">Приймач</string>
+    <string name="role_sender">Передавач</string>
+    <string name="setting_theme">Тема</string>
+    <string name="theme_system">Системна</string>
+    <string name="theme_light">Світла</string>
+    <string name="theme_dark">Темна</string>
+    <string name="setting_language">Мова</string>
+    <string name="language_system">Системна</string>
+    <string name="setting_update_check">Перевіряти оновлення під час запуску</string>
+    <string name="not_ready">Ця частина ще не готова</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Зеркало</string>
+    <string name="settings">Настройки</string>
+    <string name="about">О программе</string>
+    <string name="back">Назад</string>
+    <string name="cancel">Отмена</string>
+    <string name="setting_role">Роль устройства</string>
+    <string name="role_receiver">Приёмник</string>
+    <string name="role_sender">Передатчик</string>
+    <string name="setting_theme">Тема</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="setting_language">Язык</string>
+    <string name="language_system">Системный</string>
+    <string name="setting_update_check">Проверять обновления при запуске</string>
+    <string name="not_ready">Эта часть ещё не готова</string>
+</resources>

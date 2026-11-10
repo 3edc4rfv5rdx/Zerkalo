@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- ../shared/updater and ../shared/about are compiled into every app here;
+         their findings belong to those modules, not to this app. -->
+    <issue id="all">
+        <ignore path="**/updater/android/**" />
+        <ignore path="**/about/android/**" />
+        <ignore regexp="(^|/)(updater|about)/android/src/" />
+    </issue>
+
+    <!-- The adaptive icon stays in mipmap-anydpi-v26, as in the other projects. -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+
+    <!-- Only APKs are built, never a bundle. -->
+    <issue id="AppBundleLocaleChanges" severity="ignore" />
+
+    <!-- Below Android 13 the in-app language switch covers what localeConfig feeds. -->
+    <issue id="UnusedAttribute">
+        <ignore regexp="localeConfig" />
+    </issue>
+
+    <!-- allowBackup is false, so there is no backup to configure below Android 12. -->
+    <issue id="DataExtractionRules" severity="ignore" />
+
+    <!-- Toolchain upgrades are decided for all the projects at once. -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="OldTargetApi" severity="ignore" />
+</lint>

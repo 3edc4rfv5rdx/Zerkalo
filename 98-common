@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+#
+# Everything the numbered steps share: where the project keeps its version, how
+# that version moves, which APK a step should pick and which device it should
+# install on. Nothing here runs on its own — every step sources it:
+#
+#   cd "$(dirname "$0")" || exit 1
+#   . ./98-common
+#
+# It is numbered 98 so it sorts out of the way of the steps, and carries neither
+# an execute bit nor a .sh: it is not a script anybody runs. The shebang is here
+# for the editor and for shellcheck, which need to be told the language.
+#
+# The exit-code rule lives here too, because every step obeys it:
+#   0   did the work
+#   3   there was nothing to work on — no device, no icon master. Not a failure.
+#   *   tried and failed
+# 00-MakeAll.sh reads 3 as "skipped" and carries on; anything else non-zero ends
+# its run.
+#
+
+set -o pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+# ---------- project settings ----------
+# One file per project holds everything that differs between projects; nothing
+# below this line names a particular one.
+[ -f "$SCRIPT_DIR/99-project.conf" ] || die "No 99-project.conf beside 98-common"
+# shellcheck source=99-project.conf
+. "$SCRIPT_DIR/99-project.conf"
+
+[ -n "${PROJECT:-}" ] || die "99-project.conf must set PROJECT"
+
+APP_MODULE="${APP_MODULE:-app}"
+BUILD_FILE="${BUILD_FILE:-build_number.txt}"
+CHANGELOG_FILE="${CHANGELOG_FILE:-CHANGELOG.md}"
+OUT_DIR="${OUT_DIR:-OUT}"
+GIT_BRANCH="${GIT_BRANCH:-main}"
+GIT_REMOTE="${GIT_REMOTE:-origin}"
+EMULATOR_SERIAL="${EMULATOR_SERIAL:-emulator-5554}"
+INITIAL_BASE_VERSION="${INITIAL_BASE_VERSION:-0.1}"
+# Defaulted rather than left unset: an empty LINK_ABIS would have 19-LinkOut.sh
+# link nothing and then sweep OUT/ clean of the build that was already there.
+LINK_ABIS="${LINK_ABIS:-arm64-v8a}"
+ICON_SCRIPT="${ICON_SCRIPT:-tools/make_icon.py}"
+ICON_OUTPUTS="${ICON_OUTPUTS:-ic_launcher_foreground.png}"
+ICON_BG_COLOR="${ICON_BG_COLOR:-#013895}"
+
+# Set for the steps that source this, which is why shellcheck cannot see it used.
+# shellcheck disable=SC2034
+RELEASE_APK_DIR="$APP_MODULE/build/outputs/apk/release"
+
+# ---------- version ----------
+#
+# build_number.txt is the single source of truth, and it is plain shell:
+#
+#   base_version=0.2        the line: major.minor, moved by a feature
+#   build=45                the build number, +1 on every build
+#   version=0.2.45          the line plus that same build number
+#   build_date=2026-08-26   the day of the build, for the About screen
+#
+# The tag it all ends up as is v<version> — v0.2.45. The build number is the
+# version's own last component, so nothing repeats it; the date, which the
+# version used to carry instead, is kept here for the About screen alone.
+
+version_init() {
+    [ -f "$BUILD_FILE" ] && return 0
+    cat > "$BUILD_FILE" <<EOF
+base_version=${INITIAL_BASE_VERSION}
+build=0
+version=${INITIAL_BASE_VERSION}.0
+build_date=$(date +%F)
+EOF
+    echo ">>> Created $BUILD_FILE at ${INITIAL_BASE_VERSION}"
+}
+
+version_load() {
+    version_init
+    # shellcheck disable=SC1090
+    . "./$BUILD_FILE"
+    # All three, because a hand-edited file missing one of them produces a tag
+    # like "v-45" rather than an error anybody would notice.
+    [ -n "${base_version:-}" ] || die "No base_version in $BUILD_FILE"
+    [ -n "${build:-}" ] || die "No build in $BUILD_FILE"
+    [ -n "${version:-}" ] || die "No version in $BUILD_FILE"
+}
+
+version_save() { # version_save <base_version> <build> <version> <build_date>
+    cat > "$BUILD_FILE" <<EOF
+base_version=$1
+build=$2
+version=$3
+build_date=$4
+EOF
+}
+
+# Whether anything waiting for release is a new feature. The changelog already
+# says so itself: N is a feature, everything else is a fix, a tweak or plumbing.
+# 20-MakeTag.sh empties Unreleased when it stamps a version, so this reads
+# exactly what has landed since the last tag. Continuation lines are indented,
+# so only the first line of an entry can match, and both dialects of the marker
+# — "- N:" and "- N " — count.
+unreleased_has_feature() {
+    [ -f "$CHANGELOG_FILE" ] || return 1
+    awk '
+        /^## Unreleased$/ { inside = 1; next }
+        /^## / { inside = 0 }
+        inside && /^- N[: ]/ { found = 1 }
+        END { exit !found }
+    ' "$CHANGELOG_FILE"
+}
+
+# The line the last release went out on, so the rule fires once per feature and
+# not on every build after it. Silence rather than failure when there is no tag
+# yet, or none that parses: a project without releases is not an error, and an
+# assignment from a function that returns non-zero would end a script under
+# set -e.
+released_line() {
+    local tag
+    # Release tags only: a tag like "duplex" sorts ahead of them and would answer
+    # this question with a name that carries no version at all.
+    tag=$(git tag --list 'v*' --sort=-v:refname 2>/dev/null | head -1) || true
+    if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\. ]]; then
+        echo "${BASH_REMATCH[1]}"
+    fi
+    return 0
+}
+
+next_line() { # next_line <major.minor> -> <major.minor+1>
+    if [[ ! "$1" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+        echo "Malformed base_version: $1" >&2
+        return 1
+    fi
+    echo "${BASH_REMATCH[1]}.$((BASH_REMATCH[2] + 1))"
+}
+
+# The whole version step of a build: raise the build number, move the line when
+# the changelog says a feature is waiting, write the file back and leave
+# NEW_VERSION and NEW_BUILD set for the caller.
+#
+# The line moves by itself. Nothing to pass and nothing to remember: the
+# decision was made when the entry was written as N rather than E. It moves only
+# when the last release went out on this same line, so after it has moved the
+# tag still names the old one and the next build leaves it alone. A tree with no
+# tags yet never matches, so the line stays where it is.
+version_bump() {
+    version_load
+    NEW_BUILD=$((build + 1))
+
+    local new_base="$base_version" line
+    line=$(released_line)
+    if [ -n "$line" ] && [ "$line" = "$base_version" ] && unreleased_has_feature; then
+        new_base=$(next_line "$base_version") || return 1
+        echo ">>> A feature is waiting in $CHANGELOG_FILE, so the line moves to $new_base"
+    fi
+
+    NEW_VERSION="${new_base}.${NEW_BUILD}"
+    # The day of the build. The version stopped carrying it when its last
+    # component became the build number; the About screen reads it from here
+    # through BuildConfig.
+    NEW_BUILD_DATE=$(date +%F)
+    version_save "$new_base" "$NEW_BUILD" "$NEW_VERSION" "$NEW_BUILD_DATE"
+
+    echo "Version: $NEW_VERSION"
+    echo "Date:    $NEW_BUILD_DATE"
+    echo ">>> Build: $NEW_BUILD <<<"
+}
+
+# Fold the build_number bump into the previous commit, if safe.
+# Safe = HEAD is not yet on any remote branch AND the only modified file is
+# build_number.txt. Anything else is left uncommitted and said out loud.
+fold_build_number() {
+    git rev-parse --verify HEAD >/dev/null 2>&1 || return 0
+    local dirty
+    dirty=$(git status --porcelain | awk '{print $2}')
+    if [[ "$dirty" != "$BUILD_FILE" ]]; then
+        echo ">>> Other changes present; leaving $BUILD_FILE uncommitted."
+        return 0
+    fi
+    if [[ -n "$(git branch -r --contains HEAD 2>/dev/null)" ]]; then
+        echo ">>> HEAD already pushed; leaving $BUILD_FILE uncommitted."
+        return 0
+    fi
+    git add "$BUILD_FILE"
+    git commit --amend --no-edit >/dev/null
+    echo ">>> Folded $BUILD_FILE into $(git log -1 --pretty=format:'%h %s')"
+}
+
+# ---------- artifacts ----------
+#
+# Release APKs are named by the build itself:
+#   <project>-<version>-<build>-<abi>.apk
+# See ADD/gradle-version-wiring.kts for the Gradle side of that.
+
+pick_apk() { # pick_apk <dir> <glob...> -> newest file matching the first glob that hits
+    local dir="$1"; shift
+    local pattern apk
+    for pattern in "$@"; do
+        # Unquoted on purpose: the caller passes globs, and quoting them would
+        # look for a file with an asterisk in its name. ls -t, not find, because
+        # newest-first is the whole point and these names never carry a newline.
+        # shellcheck disable=SC2012,SC2086
+        apk=$(ls -t $dir/$pattern 2>/dev/null | head -1)
+        if [ -n "$apk" ] && [ -f "$apk" ]; then
+            echo "$apk"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# ---------- devices ----------
+
+emulator_running() {
+    adb devices | grep -q "^${EMULATOR_SERIAL}[[:space:]]*device$"
+}
+
+# The physical device to install on: an explicit serial wins, otherwise the one
+# that is connected. Returns 3 when there is none — nothing to work on is not a
+# failure. On many, the first is used and the choice is said out loud.
+pick_device() { # pick_device [serial] -> serial on stdout
+    if [ -n "${1:-}" ]; then
+        echo "$1"
+        return 0
+    fi
+    local devices count first
+    devices=$(adb devices | awk '/device$/ && !/emulator/{print $1}')
+    count=$(printf '%s\n' "$devices" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
+    if [ "$count" -eq 0 ]; then
+        echo "No physical device connected. Connect one or pass a serial." >&2
+        return 3
+    fi
+    first=$(printf '%s\n' "$devices" | head -1)
+    if [ "$count" -gt 1 ]; then
+        echo "WARNING: $count devices connected, using $first. Pass a serial to choose." >&2
+    fi
+    echo "$first"
+}
+
+install_apk() { # install_apk <serial> <apk>
+    echo ">>> Installing: $(basename "$2")"
+    echo ">>>>>>>: $1"
+    adb -s "$1" install -r "$2"
+}
+
+# ---------- git ----------
+
+require_clean_tree() {
+    echo "=== Checking that the working tree is clean ==="
+    # --porcelain reports staged, unstaged AND untracked files; git diff --quiet
+    # misses untracked, so a new source file could be built into the APK and left
+    # out of the tag it went out under.
+    local dirty
+    dirty=$(git status --porcelain)
+    if [[ -n "$dirty" ]]; then
+        echo "ERROR: You have uncommitted or untracked changes:"
+        echo "$dirty"
+        echo "Please commit, stash, or remove them before running this script."
+        exit 1
+    fi
+    echo "OK: Working tree is clean."
+}
+
+# ---------- misc ----------
+
+# Every step ends on one, so a double-clicked terminal does not close over the
+# last thing it said.
+pause() {
+    sleep "${1:-2}"
+}
+
+# The header comment of the calling script, for -h.
+show_help() { # show_help <last line>
+    sed -n "2,${1}p" "$0"
+}

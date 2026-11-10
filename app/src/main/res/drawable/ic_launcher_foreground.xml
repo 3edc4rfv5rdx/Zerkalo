@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A phone in front of a TV that plays what the phone sends. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Scaled in so the corners stay inside the 66dp circle a round mask keeps. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.85"
+        android:scaleY="0.85">
+        <!-- TV: screen outline and stand. -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3.5"
+            android:pathData="M40,34h40a4,4 0,0 1,4 4v24a4,4 0,0 1,-4 4h-40a4,4 0,0 1,-4 -4v-24a4,4 0,0 1,4 -4z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:pathData="M54,73h20" />
+        <!-- Play mark on the TV. -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M56,42l14,8l-14,8z" />
+        <!-- Phone: filled with the plate's blue so it covers the TV's corner. -->
+        <path
+            android:fillColor="@color/ic_launcher_background"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3.5"
+            android:pathData="M30,46h10a3,3 0,0 1,3 3v26a3,3 0,0 1,-3 3h-10a3,3 0,0 1,-3 -3v-26a3,3 0,0 1,3 -3z" />
+    </group>
+</vector>

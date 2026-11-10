@@ -1,0 +1,33 @@
+.claude
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+key.properties
+*.jks
+*.keystore
+NextRun.todo
+*.apkx
+
+# 19-LinkOut.sh puts the build here under its own name.
+/OUT
+
+# Kotlin compiler daemon state.
+/.kotlin
+OUT/
+
+# Scratch; everything under here is disposable except the piece the build set
+# puts there on purpose.
+/ADD/*
+!/ADD/gradle-version-wiring.kts
