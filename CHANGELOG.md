@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- I: Wire protocol and PIN pairing with JVM tests, with room reserved for sound.
 - N: App skeleton with a receiver or sender role in the settings, theme, language, updater and About.
 - I: The version is major.minor.build — the date left it — so the tag is v0.1.1 and an artifact <project>-0.1.1-arm64-v8a.apk, each number written once; 20-MakeTag.sh puts the build date after the tag in the CHANGELOG heading, for the reader
 - E: The version line looks only at release tags, so a tag like "duplex" can no longer answer which line the last release went out on
