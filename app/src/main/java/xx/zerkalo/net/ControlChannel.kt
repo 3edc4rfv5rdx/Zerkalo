@@ -158,9 +158,12 @@ class ReceiverServer(
     private val listener: Listener,
 ) {
     interface Listener {
-        fun onConnected(senderName: String)
+        fun onConnected(senderName: String, host: String)
 
         fun onDisconnected()
+
+        /** Everything the sender says during a session, beyond keeping it alive. */
+        fun onMessage(message: ControlMessage) = Unit
     }
 
     @Volatile
@@ -195,6 +198,20 @@ class ReceiverServer(
         active?.disconnect()
     }
 
+    /** Sends to the current sender, if there is one; a connection going down is not an error here. */
+    fun send(message: ControlMessage) {
+        try {
+            active?.send(message)
+        } catch (ignored: IOException) {
+            // The session's reader notices and ends it.
+        }
+    }
+
+    /** Ends the current session and goes on listening. */
+    fun endSession() {
+        active?.disconnect()
+    }
+
     private fun acceptLoop(socket: ServerSocket, codecs: Int) {
         while (!stopped) {
             val client = try {
@@ -216,8 +233,8 @@ class ReceiverServer(
                 return
             }
             active = channel
-            listener.onConnected(name)
-            channel.startSession(onMessage = {}, onClosed = {
+            listener.onConnected(name, channel.remoteHost)
+            channel.startSession(onMessage = listener::onMessage, onClosed = {
                 active = null
                 listener.onDisconnected()
             })

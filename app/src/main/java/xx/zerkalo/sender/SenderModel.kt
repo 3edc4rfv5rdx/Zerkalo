@@ -14,7 +14,6 @@ import xx.zerkalo.DISCOVERY_PORT
 import xx.zerkalo.R
 import xx.zerkalo.net.AnnounceListener
 import xx.zerkalo.net.ConnectResult
-import xx.zerkalo.net.ControlChannel
 import xx.zerkalo.net.Credential
 import xx.zerkalo.net.FoundReceiver
 import xx.zerkalo.net.ReceiverList
@@ -27,40 +26,23 @@ import kotlin.concurrent.thread
 /** Where to connect. [id] is null for an address typed in by hand. */
 data class ConnectTarget(val id: String?, val name: String, val host: String, val port: Int)
 
-sealed interface SenderStatus {
-    data object Idle : SenderStatus
-
-    data class Connecting(val name: String) : SenderStatus
-
-    /** [wrong]: the last PIN was refused. */
-    data class NeedPin(val name: String, val wrong: Boolean) : SenderStatus
-
-    data class Connected(val name: String) : SenderStatus
-
-    data class Failed(@param:StringRes val message: Int) : SenderStatus
-}
-
-/** The sender's network side: finding receivers and holding the connection to one. */
+/** The sender screen's side of things: finding receivers and starting a connection to one. */
 class SenderModel(application: Application) : AndroidViewModel(application) {
     private val _found = MutableStateFlow<List<FoundReceiver>>(emptyList())
     val found: StateFlow<List<FoundReceiver>> = _found.asStateFlow()
 
-    private val _status = MutableStateFlow<SenderStatus>(SenderStatus.Idle)
-    val status: StateFlow<SenderStatus> = _status.asStateFlow()
+    val status: StateFlow<SenderStatus> = SenderSession.status
 
     private var listener: AnnounceListener? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var pending: ConnectTarget? = null
 
-    @Volatile
-    private var channel: ControlChannel? = null
-
     fun startDiscovery() {
         if (listener != null) return
         val context = getApplication<Application>()
         // Without this lock some phones drop broadcast packets before the app sees them.
-        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        multicastLock = wifi.createMulticastLock("zerkalo-discovery").apply {
+        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        multicastLock = wifi?.createMulticastLock("zerkalo-discovery")?.apply {
             setReferenceCounted(false)
             acquire()
         }
@@ -94,7 +76,10 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun connectTo(target: ConnectTarget) {
-        if (_status.value is SenderStatus.Connecting || _status.value is SenderStatus.Connected) return
+        when (status.value) {
+            is SenderStatus.Connecting, is SenderStatus.Connected, is SenderStatus.Streaming -> return
+            else -> Unit
+        }
         val paired = PairedDevices.find(target.id, target.host)
         if (paired == null) {
             askPin(target, wrong = false)
@@ -105,7 +90,7 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
 
     private fun askPin(target: ConnectTarget, wrong: Boolean) {
         pending = target
-        _status.value = SenderStatus.NeedPin(target.name, wrong)
+        SenderSession.setStatus(SenderStatus.NeedPin(target.name, wrong))
     }
 
     fun submitPin(pin: String) {
@@ -115,21 +100,25 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
 
     fun cancelPin() {
         pending = null
-        _status.value = SenderStatus.Idle
+        SenderSession.setStatus(SenderStatus.Idle)
     }
 
     fun dismissFailure() {
-        _status.value = SenderStatus.Idle
+        SenderSession.setStatus(SenderStatus.Idle)
     }
 
     private fun launch(target: ConnectTarget, credential: Credential) {
-        _status.value = SenderStatus.Connecting(target.name)
+        SenderSession.setStatus(SenderStatus.Connecting(target.name))
         val context = getApplication<Application>()
         val senderId = AppSettings.deviceId(context)
         val senderName = AppSettings.deviceName.value
         thread(isDaemon = true, name = "sender-connect") {
             when (val result = connectToReceiver(target.host, target.port, senderId, senderName, credential)) {
-                is ConnectResult.Connected -> onConnected(target, result)
+                is ConnectResult.Connected -> {
+                    PairedDevices.save(result.receiverId, result.key, target.name, target.host)
+                    pending = null
+                    SenderSession.attach(result.channel, target.name)
+                }
                 ConnectResult.NeedPin -> {
                     PairedDevices.find(target.id, target.host)?.let { PairedDevices.forget(it.id) }
                     askPin(target, wrong = false)
@@ -143,27 +132,16 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun fail(@StringRes message: Int) {
-        _status.value = SenderStatus.Failed(message)
-    }
-
-    private fun onConnected(target: ConnectTarget, result: ConnectResult.Connected) {
-        PairedDevices.save(result.receiverId, result.key, target.name, target.host)
-        pending = null
-        val connected = result.channel
-        channel = connected
-        _status.value = SenderStatus.Connected(target.name)
-        connected.startSession(onMessage = {}, onClosed = {
-            channel = null
-            _status.value = SenderStatus.Idle
-        })
+        SenderSession.setStatus(SenderStatus.Failed(message))
     }
 
     fun disconnect() {
-        channel?.disconnect()
+        SenderSession.disconnect()
     }
 
     override fun onCleared() {
         stopDiscovery()
-        disconnect()
+        // Mirroring carries on after the screen has gone; a connection that has not started it does not.
+        if (status.value !is SenderStatus.Streaming) disconnect()
     }
 }

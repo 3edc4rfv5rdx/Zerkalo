@@ -36,4 +36,8 @@
     <string name="error_version">Версии приложения на устройствах не совпадают</string>
     <string name="error_unreachable">Не удалось связаться с приёмником</string>
     <string name="error_port">Не удалось открыть сетевой порт</string>
+    <string name="mirroring">Идёт трансляция</string>
+    <string name="stop">Стоп</string>
+    <string name="notification_channel">Трансляция экрана</string>
+    <string name="error_encoder">Не удалось начать захват экрана</string>
 </resources>

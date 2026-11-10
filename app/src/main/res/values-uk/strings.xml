@@ -36,4 +36,8 @@
     <string name="error_version">Версії застосунку на пристроях не збігаються</string>
     <string name="error_unreachable">Не вдалося зв’язатися з приймачем</string>
     <string name="error_port">Не вдалося відкрити мережевий порт</string>
+    <string name="mirroring">Триває трансляція</string>
+    <string name="stop">Стоп</string>
+    <string name="notification_channel">Трансляція екрана</string>
+    <string name="error_encoder">Не вдалося почати захоплення екрана</string>
 </resources>

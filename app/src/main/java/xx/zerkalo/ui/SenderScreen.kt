@@ -1,5 +1,15 @@
 package xx.zerkalo.ui
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionConfig
+import android.media.projection.MediaProjectionManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,20 +27,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleStartEffect
 import xx.zerkalo.PIN_LENGTH
 import xx.zerkalo.R
 import xx.zerkalo.net.isValidPin
 import xx.zerkalo.sender.SenderModel
+import xx.zerkalo.sender.SenderService
 import xx.zerkalo.sender.SenderStatus
 
 /** The phone's screen: the receivers around, and the connection to one of them. */
@@ -44,6 +58,31 @@ fun SenderScreen(model: SenderModel) {
     val status by model.status.collectAsState()
     var enteringAddress by rememberSaveable { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val capture = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (result.resultCode == Activity.RESULT_OK && data != null) {
+            SenderService.start(context, result.resultCode, data)
+        } else {
+            model.disconnect()
+        }
+    }
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Mirroring works either way; without it there is only no Stop button in the shade.
+    }
+    // On its own and early, so this dialog never competes with the capture one.
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+    // Keyed on the status itself: each new connection asks for capture once.
+    LaunchedEffect(status) {
+        if (status is SenderStatus.Connected) capture.launch(screenCaptureIntent(context))
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -52,6 +91,10 @@ fun SenderScreen(model: SenderModel) {
             is SenderStatus.Connected -> {
                 Text("${stringResource(R.string.connected)}: ${current.name}", style = MaterialTheme.typography.titleLarge)
                 Button(onClick = model::disconnect) { Text(stringResource(R.string.disconnect)) }
+            }
+            is SenderStatus.Streaming -> {
+                Text("${stringResource(R.string.mirroring)}: ${current.name}", style = MaterialTheme.typography.titleLarge)
+                Button(onClick = model::disconnect) { Text(stringResource(R.string.stop)) }
             }
             is SenderStatus.Connecting -> {
                 Text("${stringResource(R.string.connecting)}: ${current.name}", style = MaterialTheme.typography.titleLarge)
@@ -95,6 +138,16 @@ fun SenderScreen(model: SenderModel) {
             },
             onDismiss = { enteringAddress = false },
         )
+    }
+}
+
+/** The system's screen capture dialog; offers the whole screen only where that can be asked for. */
+private fun screenCaptureIntent(context: Context): Intent {
+    val manager = context.getSystemService(MediaProjectionManager::class.java)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+    } else {
+        manager.createScreenCaptureIntent()
     }
 }
 

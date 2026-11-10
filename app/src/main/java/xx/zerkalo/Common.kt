@@ -49,6 +49,24 @@ const val HANDSHAKE_TIMEOUT_MS = 5_000
 const val PING_INTERVAL_MS = 1_000L
 const val SESSION_TIMEOUT_MS = 4_000
 
+const val MAX_STREAM_WIDTH = 1920
+const val MAX_STREAM_HEIGHT = 1080
+const val DEFAULT_BIT_RATE = 8_000_000
+const val DEFAULT_FRAME_RATE = 30
+const val KEY_FRAME_INTERVAL_S = 2
+
+/** Makes the encoder repeat a still picture, so a static photo keeps producing frames. */
+const val REPEAT_FRAME_AFTER_US = 100_000L
+
+/** Sent together, then a pause, so a large key frame does not overflow the access point's queue. */
+const val PACKETS_PER_BURST = 32
+const val MAX_PARTIAL_FRAMES = 16
+const val DECODER_QUEUE_FRAMES = 8
+
+/** Room asked of the decoder's input buffers: a detailed key frame can outgrow its default. */
+const val MAX_ENCODED_FRAME_BYTES = 4 * 1024 * 1024
+const val VIDEO_RECEIVE_BUFFER = 4 * 1024 * 1024
+
 fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
 /** The bytes [text] spells in hex, or null if it does not. */

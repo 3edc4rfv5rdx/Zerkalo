@@ -35,20 +35,28 @@ fun App(sender: SenderModel, receiver: ReceiverModel, onAbout: () -> Unit) {
     BackHandler(enabled = screen == Screen.SETTINGS) { screen = Screen.HOME }
 
     val role by AppSettings.role.collectAsState()
+    val receiverState by receiver.state.collectAsState()
     // A receiver's session ends with its screen; a sender's has to be ended here.
     LaunchedEffect(role) { if (role != Role.SENDER) sender.disconnect() }
 
+    // The video takes the whole display. ReceiverScreen stays at the same place in the
+    // composition either way: moving it would end the session it runs.
+    val fullScreen = role == Role.RECEIVER && receiverState.connectedTo != null
+    val insets = if (fullScreen) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+        Column(Modifier.fillMaxSize().then(insets)) {
             when (screen) {
                 Screen.HOME -> {
-                    TopBar(
-                        title = stringResource(role.labelRes()),
-                        action = BarAction(Icons.Filled.Settings, stringResource(R.string.settings)) {
-                            screen = Screen.SETTINGS
-                        },
-                        iconFirst = false,
-                    )
+                    if (!fullScreen) {
+                        TopBar(
+                            title = stringResource(role.labelRes()),
+                            action = BarAction(Icons.Filled.Settings, stringResource(R.string.settings)) {
+                                screen = Screen.SETTINGS
+                            },
+                            iconFirst = false,
+                        )
+                    }
                     when (role) {
                         Role.RECEIVER -> ReceiverScreen(receiver)
                         Role.SENDER -> SenderScreen(sender)

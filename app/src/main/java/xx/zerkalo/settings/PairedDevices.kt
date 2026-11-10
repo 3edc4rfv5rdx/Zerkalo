@@ -1,6 +1,7 @@
 package xx.zerkalo.settings
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,14 +21,14 @@ class PairedDevice(val id: String, val name: String, val host: String, val token
 object PairedDevices : TokenStore {
     private const val PREFS = "zerkalo_paired"
 
-    private lateinit var context: Context
+    private lateinit var prefs: SharedPreferences
     private val _devices = MutableStateFlow<List<PairedDevice>>(emptyList())
     val devices: StateFlow<List<PairedDevice>> = _devices.asStateFlow()
 
     @Synchronized
-    fun load(appContext: Context) {
-        context = appContext.applicationContext
-        _devices.value = prefs().all.mapNotNull { (id, value) -> parse(id, value as? String) }.sorted()
+    fun load(context: Context) {
+        prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        _devices.value = prefs.all.mapNotNull { (id, value) -> parse(id, value as? String) }.sorted()
     }
 
     private fun parse(id: String, value: String?): PairedDevice? {
@@ -37,8 +38,6 @@ object PairedDevices : TokenStore {
     }
 
     private fun List<PairedDevice>.sorted() = sortedWith(compareBy({ it.name }, { it.id }))
-
-    private fun prefs() = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /**
      * The device with this [id] or, for an address typed in by hand ([id] null), the one
@@ -56,13 +55,13 @@ object PairedDevices : TokenStore {
     @Synchronized
     override fun save(peerId: ByteArray, token: ByteArray, name: String, host: String) {
         val id = peerId.toHex()
-        prefs().edit { putString(id, "${token.toHex()}\n$host\n$name") }
+        prefs.edit { putString(id, "${token.toHex()}\n$host\n$name") }
         _devices.value = (_devices.value.filterNot { it.id == id } + PairedDevice(id, name, host, token)).sorted()
     }
 
     @Synchronized
     fun forget(id: String) {
-        prefs().edit { remove(id) }
+        prefs.edit { remove(id) }
         _devices.value = _devices.value.filterNot { it.id == id }
     }
 }

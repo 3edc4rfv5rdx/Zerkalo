@@ -36,4 +36,8 @@
     <string name="error_version">The app versions on the two devices do not match</string>
     <string name="error_unreachable">Could not reach the receiver</string>
     <string name="error_port">Could not open the network port</string>
+    <string name="mirroring">Mirroring</string>
+    <string name="stop">Stop</string>
+    <string name="notification_channel">Screen mirroring</string>
+    <string name="error_encoder">Could not start capturing the screen</string>
 </resources>

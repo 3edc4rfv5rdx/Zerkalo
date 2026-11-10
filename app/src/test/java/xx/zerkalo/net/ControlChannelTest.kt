@@ -54,7 +54,7 @@ class ControlChannelTest {
         guard = guard,
         tokens = tokens,
         listener = object : ReceiverServer.Listener {
-            override fun onConnected(senderName: String) {
+            override fun onConnected(senderName: String, host: String) {
                 this@ControlChannelTest.senderName = senderName
                 connected.countDown()
             }

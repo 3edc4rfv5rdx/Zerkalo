@@ -1,7 +1,9 @@
 package xx.zerkalo.receiver
 
 import android.app.Application
+import android.net.wifi.WifiManager
 import android.os.SystemClock
+import android.view.Surface
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,20 +12,27 @@ import xx.zerkalo.CONTROL_PORT
 import xx.zerkalo.DISCOVERY_PORT
 import xx.zerkalo.net.Announce
 import xx.zerkalo.net.AnnounceSender
+import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.net.PinGuard
 import xx.zerkalo.net.ReceiverServer
 import xx.zerkalo.net.localIpv4Addresses
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
+import xx.zerkalo.video.acquireLowLatencyWifi
 import xx.zerkalo.video.hardwareCodecMask
 import java.io.IOException
 import kotlin.concurrent.thread
 
-/** [connectedTo] is the sender's name during a session. [portTaken]: another app holds the control port. */
+/**
+ * [connectedTo] is the sender's name during a session. [portTaken]: another app holds
+ * the control port. [videoWidth] and [videoHeight] are zero until the stream is described.
+ */
 data class ReceiverState(
     val connectedTo: String? = null,
     val portTaken: Boolean = false,
     val addresses: List<String> = emptyList(),
+    val videoWidth: Int = 0,
+    val videoHeight: Int = 0,
 )
 
 /** The receiver's network side, running while its screen is on show. */
@@ -41,16 +50,29 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
     private var server: ReceiverServer? = null
     private var announcer: AnnounceSender? = null
 
+    @Volatile
+    private var session: ReceiverSession? = null
+
+    @Volatile
+    private var surface: Surface? = null
+
+    private var wifiLock: WifiManager.WifiLock? = null
+
     fun start() {
         if (server != null) return
         val context = getApplication<Application>()
         val id = AppSettings.deviceId(context)
+        lateinit var started: ReceiverServer
         val listener = object : ReceiverServer.Listener {
-            override fun onConnected(senderName: String) = update { copy(connectedTo = senderName) }
+            override fun onConnected(senderName: String, host: String) = beginSession(started, senderName, host)
 
-            override fun onDisconnected() = update { copy(connectedTo = null) }
+            override fun onDisconnected() = endSessionState()
+
+            override fun onMessage(message: ControlMessage) {
+                if (message is ControlMessage.Config) session?.onConfig(message)
+            }
         }
-        val started = ReceiverServer(CONTROL_PORT, id, { hardwareCodecMask(encoder = false) }, guard, PairedDevices, listener)
+        started = ReceiverServer(CONTROL_PORT, id, { hardwareCodecMask(encoder = false) }, guard, PairedDevices, listener)
         server = started
         update { copy(portTaken = false) }
         thread(isDaemon = true, name = "receiver-start") {
@@ -63,6 +85,41 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
         }
         announcer = AnnounceSender(Announce(id, CONTROL_PORT, AppSettings.deviceName.value).encode(), DISCOVERY_PORT)
             .also { it.start() }
+    }
+
+    private fun beginSession(owner: ReceiverServer, senderName: String, host: String) {
+        val created = ReceiverSession(
+            senderHost = host,
+            sendReady = { configId -> owner.send(ControlMessage.Ready(configId)) },
+            onVideoSize = { width, height -> update { copy(videoWidth = width, videoHeight = height) } },
+        )
+        created.setSurface(surface)
+        session = created
+        created.start()
+        synchronized(this) { wifiLock = acquireLowLatencyWifi(getApplication()) }
+        // Last: this is what puts the surface on screen, and the session must be there for it.
+        update { copy(connectedTo = senderName) }
+    }
+
+    private fun endSessionState() {
+        session?.stop()
+        session = null
+        synchronized(this) {
+            wifiLock?.release()
+            wifiLock = null
+        }
+        update { copy(connectedTo = null, videoWidth = 0, videoHeight = 0) }
+    }
+
+    /** Called with the surface as it comes and goes; null blocks until the decoder has let go. */
+    fun setSurface(newSurface: Surface?) {
+        surface = newSurface
+        session?.setSurface(newSurface)
+    }
+
+    /** Ends the current session; the receiver goes back to waiting. */
+    fun endSession() {
+        server?.endSession()
     }
 
     fun stop() {
