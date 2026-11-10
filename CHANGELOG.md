@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: Pale buttons have an outline in the accent color.
 - F: Cards, grouped settings and a mirror or file switch on the sender make the screens clearer.
 - N: The accent color is chosen in the settings, from the same six as in the other apps.
 - E: A TV box without a microphone is no longer ruled out by the sound permission.

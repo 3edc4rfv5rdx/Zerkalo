@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -237,7 +236,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 }
             },
             confirmButton = {
-                FilledTonalButton(onClick = { editing = Editing.NONE }) { Text(stringResource(R.string.cancel), maxLines = 1) }
+                TonalButton(onClick = { editing = Editing.NONE }) { Text(stringResource(R.string.cancel), maxLines = 1) }
             },
         )
 
@@ -302,14 +301,14 @@ private fun AudioOffsetRow(offset: Int, onChange: (Int) -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
-        FilledTonalButton(onClick = { onChange(offset - AUDIO_OFFSET_STEP_MS) }) { Text("\u2212", maxLines = 1) }
+        TonalButton(onClick = { onChange(offset - AUDIO_OFFSET_STEP_MS) }) { Text("\u2212", maxLines = 1) }
         Text(
             text = "${if (offset > 0) "+" else ""}$offset ${stringResource(R.string.unit_ms)}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
-        FilledTonalButton(onClick = { onChange(offset + AUDIO_OFFSET_STEP_MS) }) { Text("+", maxLines = 1) }
+        TonalButton(onClick = { onChange(offset + AUDIO_OFFSET_STEP_MS) }) { Text("+", maxLines = 1) }
     }
 }
 
@@ -323,7 +322,7 @@ private fun NameDialog(initial: String, onSave: (String) -> Unit, onDismiss: () 
         text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true) },
         confirmButton = { Button(onClick = { onSave(name) }) { Text(stringResource(R.string.save)) } },
         dismissButton = {
-            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
+            TonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
         },
     )
 }
@@ -341,7 +340,7 @@ private fun PairedDialog(store: PeerStore, onDismiss: () -> Unit) {
                 devices.forEach { device ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(device.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        FilledTonalButton(onClick = { store.forget(device.id) }) {
+                        TonalButton(onClick = { store.forget(device.id) }) {
                             Text(stringResource(R.string.forget), maxLines = 1)
                         }
                     }
@@ -349,7 +348,7 @@ private fun PairedDialog(store: PeerStore, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.close), maxLines = 1) }
+            TonalButton(onClick = onDismiss) { Text(stringResource(R.string.close), maxLines = 1) }
         },
     )
 }
@@ -388,7 +387,7 @@ private fun <T> ChoiceDialog(
             }
         },
         confirmButton = {
-            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
+            TonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
         },
     )
 }

@@ -1,16 +1,19 @@
 package xx.zerkalo.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -108,6 +111,19 @@ fun AccentSwatch(color: Color, selected: Boolean, onClick: () -> Unit) {
                 shape = CircleShape,
             )
             .clickable(onClick = onClick),
+    )
+}
+
+// ---------- Buttons ----------
+
+/** A secondary button. Its fill is only a pale wash of the accent, so the outline carries the colour. */
+@Composable
+fun TonalButton(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier,
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+        content = content,
     )
 }
 

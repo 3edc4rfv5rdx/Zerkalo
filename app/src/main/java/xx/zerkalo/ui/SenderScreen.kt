@@ -30,7 +30,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -141,7 +140,7 @@ fun SenderScreen(model: SenderModel) {
             }
         }
         if (listShown) {
-            FilledTonalButton(
+            TonalButton(
                 onClick = { enteringAddress = true },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             ) {
@@ -156,7 +155,7 @@ fun SenderScreen(model: SenderModel) {
             onDismissRequest = model::dismissFailure,
             text = { Text(stringResource(current.message), style = MaterialTheme.typography.titleMedium) },
             confirmButton = {
-                FilledTonalButton(onClick = model::dismissFailure) { Text(stringResource(R.string.ok)) }
+                TonalButton(onClick = model::dismissFailure) { Text(stringResource(R.string.ok)) }
             },
         )
         else -> Unit
@@ -238,7 +237,7 @@ private fun RowScope.ModeButton(label: String, selected: Boolean, onClick: () ->
     if (selected) {
         Button(onClick = onClick, modifier = Modifier.weight(1f)) { Text(label, maxLines = 1) }
     } else {
-        FilledTonalButton(onClick = onClick, modifier = Modifier.weight(1f)) { Text(label, maxLines = 1) }
+        TonalButton(onClick = onClick, modifier = Modifier.weight(1f)) { Text(label, maxLines = 1) }
     }
 }
 
@@ -264,7 +263,7 @@ private fun ActivePanel(text: ActivePanelText) {
         Button(onClick = { activity?.moveTaskToBack(true) }, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
             Text(stringResource(R.string.minimize))
         }
-        FilledTonalButton(onClick = text.onStop, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
+        TonalButton(onClick = text.onStop, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
             Text(stringResource(R.string.stop))
         }
     }
@@ -304,7 +303,7 @@ private fun PinDialog(name: String, wrong: Boolean, onSubmit: (String) -> Unit, 
             Button(onClick = { onSubmit(pin) }, enabled = isValidPin(pin)) { Text(stringResource(R.string.connect)) }
         },
         dismissButton = {
-            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            TonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -329,7 +328,7 @@ private fun AddressDialog(onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            TonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
