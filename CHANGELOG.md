@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- I: ADD is tracked by git, and local files such as test videos live in the ignored tmp folder.
 - I: The Russian specification stays beside the English one.
 - I: The specification is in English, in SPEC.md.
 - I: The README describes the working app, and the project carries the GPL-3.0 license.

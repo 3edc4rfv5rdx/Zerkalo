@@ -27,7 +27,5 @@ NextRun.todo
 /.kotlin
 OUT/
 
-# Scratch; everything under here is disposable except the piece the build set
-# puts there on purpose.
-/ADD/*
-!/ADD/gradle-version-wiring.kts
+# Local files that never go into the repository.
+/tmp
