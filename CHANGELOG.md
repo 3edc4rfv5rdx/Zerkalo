@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+## v0.1.9 (2026-11-10)
 - I: ADD is tracked by git, and local files such as test videos live in the ignored tmp folder.
 - I: The Russian specification stays beside the English one.
 - I: The specification is in English, in SPEC.md.
