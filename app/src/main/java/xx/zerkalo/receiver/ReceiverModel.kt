@@ -91,6 +91,7 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
         val created = ReceiverSession(
             senderHost = host,
             sendReady = { configId -> owner.send(ControlMessage.Ready(configId)) },
+            sendKeyframeRequest = { owner.send(ControlMessage.KeyframeRequest) },
             onVideoSize = { width, height -> update { copy(videoWidth = width, videoHeight = height) } },
         )
         created.setSurface(surface)

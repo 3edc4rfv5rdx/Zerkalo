@@ -85,6 +85,7 @@ class SenderService : Service() {
         val started = ScreenEncoder(this, captured, channel, onFailed = { SenderSession.fail(R.string.error_encoder) })
         encoder = started
         SenderSession.onReady = started::onReady
+        SenderSession.onKeyframeRequest = started::requestKeyFrame
         SenderSession.onClosed = { mainHandler.post { stopSelf() } }
         started.start()
         SenderSession.markStreaming()
@@ -95,6 +96,7 @@ class SenderService : Service() {
 
     override fun onDestroy() {
         SenderSession.onReady = null
+        SenderSession.onKeyframeRequest = null
         SenderSession.onClosed = null
         encoder?.stop()
         encoder = null

@@ -63,6 +63,18 @@ const val PACKETS_PER_BURST = 32
 const val MAX_PARTIAL_FRAMES = 16
 const val DECODER_QUEUE_FRAMES = 8
 
+/** How many sent frames stay available for repeating lost packets. */
+const val RETRANSMIT_FRAMES = 32
+/** Silence on an unfinished frame before its holes count as lost and not as still on the way. */
+const val NACK_DELAY_MS = 10L
+const val NACK_INTERVAL_MS = 20L
+const val MAX_NACKS_PER_FRAME = 3
+/** How long a frame may stay unfinished before it is given up on. */
+const val FRAME_DEADLINE_MS = 80L
+const val KEYFRAME_REQUEST_INTERVAL_MS = 500L
+const val PLAYOUT_DELAY_MS = 80L
+const val PLAYOUT_WINDOW_MS = 2_000L
+
 /** Room asked of the decoder's input buffers: a detailed key frame can outgrow its default. */
 const val MAX_ENCODED_FRAME_BYTES = 4 * 1024 * 1024
 const val VIDEO_RECEIVE_BUFFER = 4 * 1024 * 1024

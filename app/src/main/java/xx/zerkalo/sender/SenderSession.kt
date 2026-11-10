@@ -39,6 +39,10 @@ object SenderSession {
     @Volatile
     var onReady: ((Int) -> Unit)? = null
 
+    /** Told that the receiver has lost its place and needs a key frame. */
+    @Volatile
+    var onKeyframeRequest: (() -> Unit)? = null
+
     /** Told when the connection has ended. */
     @Volatile
     var onClosed: (() -> Unit)? = null
@@ -55,7 +59,13 @@ object SenderSession {
         channel = connected
         _status.value = SenderStatus.Connected(name)
         connected.startSession(
-            onMessage = { message -> if (message is ControlMessage.Ready) onReady?.invoke(message.configId) },
+            onMessage = { message ->
+                when (message) {
+                    is ControlMessage.Ready -> onReady?.invoke(message.configId)
+                    ControlMessage.KeyframeRequest -> onKeyframeRequest?.invoke()
+                    else -> Unit
+                }
+            },
             onClosed = {
                 channel = null
                 _status.value = failure?.let { SenderStatus.Failed(it) } ?: SenderStatus.Idle

@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: Lost packets are sent again, a broken stream picks up at a new key frame, frames are shown on time, and the picture follows the sender's rotation.
 - N: Receivers once connected stay in the sender's list, so their address need not be typed again.
 - N: The sender's screen is captured, encoded as H.264 and shown full screen on the receiver.
 - N: Receivers are found on the network, paired with a PIN once, and stay connected until either side leaves.

@@ -7,6 +7,7 @@ import android.os.Build
 import android.util.Log
 import android.view.Surface
 import xx.zerkalo.DECODER_QUEUE_FRAMES
+import xx.zerkalo.KEYFRAME_REQUEST_INTERVAL_MS
 import xx.zerkalo.MAX_DATAGRAM
 import xx.zerkalo.MAX_ENCODED_FRAME_BYTES
 import xx.zerkalo.VIDEO_PORT
@@ -15,17 +16,22 @@ import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.net.VideoHeader
 import xx.zerkalo.video.AssembledFrame
 import xx.zerkalo.video.FrameAssembler
+import xx.zerkalo.video.PlayoutClock
 import xx.zerkalo.video.mimeOf
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.SocketAddress
 import java.net.SocketTimeoutException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 private const val TAG = "ReceiverSession"
-private const val SOCKET_POLL_MS = 500
+private const val SOCKET_POLL_MS = 5
+private const val NANOS_PER_MS = 1_000_000L
+private const val US_PER_MS = 1_000L
+private const val MAX_RENDER_AHEAD_MS = 500L
 private const val FRAME_POLL_MS = 5L
 private const val CSD_INPUT_TIMEOUT_US = 1_000_000L
 private const val SURFACE_RELEASE_WAIT_MS = 500L
@@ -38,12 +44,14 @@ private const val SURFACE_RELEASE_STEP_MS = 5L
 class ReceiverSession(
     private val senderHost: String,
     private val sendReady: (Int) -> Unit,
+    private val sendKeyframeRequest: () -> Unit,
     private val onVideoSize: (Int, Int) -> Unit,
 ) {
     /** A decoder setup: a new instance whenever the configuration or the surface changes. */
     private class Target(val config: ControlMessage.Config, val surface: Surface)
 
     private val frames = ArrayBlockingQueue<AssembledFrame>(DECODER_QUEUE_FRAMES)
+    private val clock = PlayoutClock()
 
     @Volatile
     private var stopped = false
@@ -119,29 +127,68 @@ class ReceiverSession(
             val packet = DatagramPacket(buffer, buffer.size)
             var assembler = FrameAssembler()
             var assemblerConfig = -1
+            var replyTo: SocketAddress? = null
+            var lastKeyRequest = 0L
             while (!stopped) {
                 try {
                     packet.length = buffer.size
                     bound.receive(packet)
+                    val header = if (packet.address?.hostAddress == senderHost) {
+                        VideoHeader.parse(buffer, packet.length)
+                    } else {
+                        null
+                    }
+                    if (header != null && header.configId == config?.configId) {
+                        if (header.configId != assemblerConfig) {
+                            assembler = FrameAssembler()
+                            assemblerConfig = header.configId
+                        }
+                        replyTo = packet.socketAddress
+                        assembler.add(header, buffer, packet.length, nowMs())
+                    }
                 } catch (ignored: SocketTimeoutException) {
-                    continue
+                    // Only here so the deadlines below are looked at on a quiet network.
                 } catch (ignored: IOException) {
                     return
                 }
-                if (packet.address?.hostAddress != senderHost) continue
-                val header = VideoHeader.parse(buffer, packet.length) ?: continue
-                if (header.configId != config?.configId) continue
-                if (header.configId != assemblerConfig) {
-                    assembler = FrameAssembler()
-                    assemblerConfig = header.configId
+                val now = nowMs()
+                deliverReady(assembler, now)
+                replyTo?.let { sendNacks(bound, it, assembler, now) }
+                if (config != null && assembler.waitingForKey && now - lastKeyRequest >= KEYFRAME_REQUEST_INTERVAL_MS) {
+                    lastKeyRequest = now
+                    sendKeyframeRequest()
                 }
-                val frame = assembler.add(header, buffer, packet.length) ?: continue
-                // A full queue means the decoder is behind: this frame is dropped, and
-                // decoding goes wrong only until the next key frame.
-                frames.offer(frame)
             }
         }
     }
+
+    private fun deliverReady(assembler: FrameAssembler, now: Long) {
+        while (true) {
+            when (val step = assembler.next(now)) {
+                FrameAssembler.Step.Idle -> return
+                FrameAssembler.Step.Lost -> Unit
+                is FrameAssembler.Step.Ready -> {
+                    clock.onFrame(step.frame.ptsMs, now)
+                    // A full queue means the decoder is behind, and a dropped frame breaks
+                    // the chain just as a lost one does.
+                    if (!frames.offer(step.frame)) assembler.resync()
+                }
+            }
+        }
+    }
+
+    private fun sendNacks(socket: DatagramSocket, to: SocketAddress, assembler: FrameAssembler, now: Long) {
+        try {
+            assembler.nacks(now).forEach { nack ->
+                val bytes = nack.encode()
+                socket.send(DatagramPacket(bytes, bytes.size, to))
+            }
+        } catch (ignored: IOException) {
+            // A request that does not get through is the same as one whose answer is lost.
+        }
+    }
+
+    private fun nowMs(): Long = System.nanoTime() / NANOS_PER_MS
 
     private fun decodeLoop() {
         var decoder: MediaCodec? = null
@@ -238,7 +285,15 @@ class ReceiverSession(
         while (true) {
             val index = decoder.dequeueOutputBuffer(info, 0)
             if (index >= 0) {
-                decoder.releaseOutputBuffer(index, true)
+                val target = clock.targetMs(info.presentationTimeUs / US_PER_MS)
+                if (target == null) {
+                    decoder.releaseOutputBuffer(index, true)
+                } else {
+                    // A timestamp in the past shows at once; one far ahead would mean a clock
+                    // gone wrong, and must not freeze the picture.
+                    val shown = minOf(target, nowMs() + MAX_RENDER_AHEAD_MS)
+                    decoder.releaseOutputBuffer(index, shown * NANOS_PER_MS)
+                }
             } else if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 return
             }
