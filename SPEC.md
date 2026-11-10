@@ -267,6 +267,7 @@ holes for NACK, a change of `configId`.
 6. H.265, quality and frame rate settings.
 7. Sound.
 8. Keep the sender's screen from going off by timeout during mirroring, while letting it dim (`SCREEN_DIM_WAKE_LOCK`).
+9. Later: a "send a file" mode beside the mirror. The phone serves the file over HTTP with range requests and the TV box plays it itself through Media3, with no re-encoding, so quality is the original, sound and seeking come for free and the phone's screen can be off.
 
 ## To check on hardware
 
