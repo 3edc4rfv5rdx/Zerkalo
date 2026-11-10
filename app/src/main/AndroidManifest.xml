@@ -32,6 +32,11 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <!-- RECORD_AUDIO only captures what apps play, so a TV box with no microphone is fine. -->
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
     <!-- A TV box may be on Ethernet only; the Wi-Fi locks are skipped there. -->
     <uses-feature
         android:name="android.hardware.wifi"

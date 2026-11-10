@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: A TV box without a microphone is no longer ruled out by the sound permission.
 - N: A file picked on the sender is served over HTTP and opened in a player on the receiver, with seeking.
 ## v0.2.13 (2026-11-10)
 - I: A send-a-file mode is in the plan.
