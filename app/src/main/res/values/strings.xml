@@ -5,9 +5,16 @@
     <string name="about">About</string>
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="save">Save</string>
+    <string name="ok">OK</string>
     <string name="setting_role">Device role</string>
     <string name="role_receiver">Receiver</string>
     <string name="role_sender">Sender</string>
+    <string name="setting_device_name">Device name</string>
+    <string name="setting_paired">Paired devices</string>
+    <string name="no_paired">No paired devices</string>
+    <string name="forget">Forget</string>
     <string name="setting_theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
@@ -15,5 +22,18 @@
     <string name="setting_language">Language</string>
     <string name="language_system">System</string>
     <string name="setting_update_check">Check for updates at launch</string>
-    <string name="not_ready">This part is not ready yet</string>
+    <string name="pin_label">PIN</string>
+    <string name="connected">Connected</string>
+    <string name="connecting">Connecting</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="connect">Connect</string>
+    <string name="searching">Looking for receivers</string>
+    <string name="enter_address">Enter IP address</string>
+    <string name="address_label">IP address of the receiver</string>
+    <string name="pin_from_tv">PIN from the TV screen</string>
+    <string name="wrong_pin">Wrong PIN</string>
+    <string name="error_busy">The receiver is busy with another device</string>
+    <string name="error_version">The app versions on the two devices do not match</string>
+    <string name="error_unreachable">Could not reach the receiver</string>
+    <string name="error_port">Could not open the network port</string>
 </resources>

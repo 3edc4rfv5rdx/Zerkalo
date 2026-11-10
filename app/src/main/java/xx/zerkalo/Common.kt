@@ -41,3 +41,22 @@ const val CODEC_AUDIO_OPUS = 4
 const val PIN_LENGTH = 4
 const val PIN_MAX_FAILURES = 3
 const val PIN_LOCKOUT_MS = 10_000L
+
+const val ANNOUNCE_INTERVAL_MS = 2_000L
+const val RECEIVER_EXPIRY_MS = 7_000L
+const val CONNECT_TIMEOUT_MS = 3_000
+const val HANDSHAKE_TIMEOUT_MS = 5_000
+const val PING_INTERVAL_MS = 1_000L
+const val SESSION_TIMEOUT_MS = 4_000
+
+fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+/** The bytes [text] spells in hex, or null if it does not. */
+fun parseHex(text: String): ByteArray? {
+    if (text.length % 2 != 0) return null
+    return ByteArray(text.length / 2) { index ->
+        val high = text[index * 2].digitToIntOrNull(16) ?: return null
+        val low = text[index * 2 + 1].digitToIntOrNull(16) ?: return null
+        (high * 16 + low).toByte()
+    }
+}

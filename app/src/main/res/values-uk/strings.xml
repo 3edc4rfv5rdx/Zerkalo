@@ -5,9 +5,16 @@
     <string name="about">Про програму</string>
     <string name="back">Назад</string>
     <string name="cancel">Скасувати</string>
+    <string name="close">Закрити</string>
+    <string name="save">Зберегти</string>
+    <string name="ok">ОК</string>
     <string name="setting_role">Роль пристрою</string>
     <string name="role_receiver">Приймач</string>
     <string name="role_sender">Передавач</string>
+    <string name="setting_device_name">Назва пристрою</string>
+    <string name="setting_paired">Запам’ятані пристрої</string>
+    <string name="no_paired">Немає запам’ятаних пристроїв</string>
+    <string name="forget">Забути</string>
     <string name="setting_theme">Тема</string>
     <string name="theme_system">Системна</string>
     <string name="theme_light">Світла</string>
@@ -15,5 +22,18 @@
     <string name="setting_language">Мова</string>
     <string name="language_system">Системна</string>
     <string name="setting_update_check">Перевіряти оновлення під час запуску</string>
-    <string name="not_ready">Ця частина ще не готова</string>
+    <string name="pin_label">PIN-код</string>
+    <string name="connected">Підключено</string>
+    <string name="connecting">Підключення</string>
+    <string name="disconnect">Відключити</string>
+    <string name="connect">Підключити</string>
+    <string name="searching">Пошук приймачів</string>
+    <string name="enter_address">Ввести IP-адресу</string>
+    <string name="address_label">IP-адреса приймача</string>
+    <string name="pin_from_tv">PIN-код з екрана телевізора</string>
+    <string name="wrong_pin">Неправильний PIN-код</string>
+    <string name="error_busy">Приймач зайнятий іншим пристроєм</string>
+    <string name="error_version">Версії застосунку на пристроях не збігаються</string>
+    <string name="error_unreachable">Не вдалося зв’язатися з приймачем</string>
+    <string name="error_port">Не вдалося відкрити мережевий порт</string>
 </resources>

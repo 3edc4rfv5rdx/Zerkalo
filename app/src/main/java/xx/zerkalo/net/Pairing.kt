@@ -49,7 +49,11 @@ fun newPin(random: Random = SecureRandom()): String =
  * would not slow a guesser down, so failures also lock PIN attempts out for a while.
  * Used from the one thread that handles incoming connections.
  */
-class PinGuard(private val now: () -> Long, private val generate: () -> String = { newPin() }) {
+class PinGuard(
+    private val now: () -> Long,
+    private val generate: () -> String = { newPin() },
+    private val onChanged: (String) -> Unit = {},
+) {
     var pin: String = generate()
         private set
 
@@ -65,6 +69,7 @@ class PinGuard(private val now: () -> Long, private val generate: () -> String =
             failures = 0
             pin = generate()
             lockedUntil = now() + PIN_LOCKOUT_MS
+            onChanged(pin)
         }
     }
 

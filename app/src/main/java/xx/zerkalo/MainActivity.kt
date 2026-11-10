@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,7 +17,10 @@ import dev.about.About
 import dev.about.AboutConfig
 import dev.updater.Updater
 import dev.updater.UpdaterConfig
+import xx.zerkalo.receiver.ReceiverModel
+import xx.zerkalo.sender.SenderModel
 import xx.zerkalo.settings.AppSettings
+import xx.zerkalo.settings.PairedDevices
 import xx.zerkalo.settings.localizedContext
 import xx.zerkalo.ui.App
 import xx.zerkalo.ui.WindowDark
@@ -29,6 +33,9 @@ private val UPDATER_CONFIG = UpdaterConfig(appKey = "zerkalo", repo = "Zerkalo")
 
 class MainActivity : ComponentActivity() {
 
+    private val senderModel by viewModels<SenderModel>()
+    private val receiverModel by viewModels<ReceiverModel>()
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(localizedContext(newBase))
     }
@@ -36,6 +43,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppSettings.load(this)
+        PairedDevices.load(this)
         Updater.checkOnStart(this, UPDATER_CONFIG)
         applyWindowTheme()
 
@@ -46,7 +54,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(themeMode) { applyWindowTheme() }
 
             ZerkaloTheme(themeMode) {
-                App(onAbout = ::showAbout)
+                App(sender = senderModel, receiver = receiverModel, onAbout = ::showAbout)
             }
         }
     }

@@ -13,9 +13,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import dev.updater.Updater
 import xx.zerkalo.R
 import xx.zerkalo.settings.AppSettings
+import xx.zerkalo.settings.PairedDevices
 import xx.zerkalo.settings.Role
 import xx.zerkalo.settings.ThemeMode
 import xx.zerkalo.settings.currentLanguageTag
@@ -42,7 +45,7 @@ import xx.zerkalo.settings.setLanguageTag
 import xx.zerkalo.settings.supportedLanguages
 
 /** Which editor is open; only one can be at a time. */
-private enum class Editing { NONE, ROLE, THEME, LANGUAGE }
+private enum class Editing { NONE, ROLE, NAME, PAIRED, THEME, LANGUAGE }
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
@@ -50,6 +53,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
     val activity = LocalActivity.current
     val role by AppSettings.role.collectAsState()
     val themeMode by AppSettings.themeMode.collectAsState()
+    val deviceName by AppSettings.deviceName.collectAsState()
 
     val systemLabel = stringResource(R.string.language_system)
     val languages = remember(context, systemLabel) { supportedLanguages(context, systemLabel) }
@@ -70,6 +74,14 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             SettingRow(stringResource(R.string.setting_role), stringResource(role.labelRes())) {
                 editing = Editing.ROLE
+            }
+            HorizontalDivider()
+            SettingRow(stringResource(R.string.setting_device_name), deviceName) {
+                editing = Editing.NAME
+            }
+            HorizontalDivider()
+            SettingRow(stringResource(R.string.setting_paired), "") {
+                editing = Editing.PAIRED
             }
             HorizontalDivider()
             SettingRow(stringResource(R.string.setting_theme), stringResource(themeMode.labelRes())) {
@@ -112,6 +124,17 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             },
         )
 
+        Editing.NAME -> NameDialog(
+            initial = deviceName,
+            onSave = {
+                AppSettings.setDeviceName(context, it)
+                editing = Editing.NONE
+            },
+            onDismiss = { editing = Editing.NONE },
+        )
+
+        Editing.PAIRED -> PairedDialog(onDismiss = { editing = Editing.NONE })
+
         Editing.THEME -> ChoiceDialog(
             title = stringResource(R.string.setting_theme),
             options = ThemeMode.entries,
@@ -150,6 +173,47 @@ private fun SettingRow(label: String, value: String, onClick: () -> Unit) {
         Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
     }
+}
+
+/** Edits the name other devices see; left blank it goes back to the device's model. */
+@Composable
+private fun NameDialog(initial: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by rememberSaveable { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.setting_device_name)) },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true) },
+        confirmButton = { Button(onClick = { onSave(name) }) { Text(stringResource(R.string.save)) } },
+        dismissButton = {
+            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), maxLines = 1) }
+        },
+    )
+}
+
+/** The devices this one is paired with; forgetting one means entering the PIN again. */
+@Composable
+private fun PairedDialog(onDismiss: () -> Unit) {
+    val devices by PairedDevices.devices.collectAsState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.setting_paired)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (devices.isEmpty()) Text(stringResource(R.string.no_paired))
+                devices.forEach { device ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(device.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        FilledTonalButton(onClick = { PairedDevices.forget(device.id) }) {
+                            Text(stringResource(R.string.forget), maxLines = 1)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            FilledTonalButton(onClick = onDismiss) { Text(stringResource(R.string.close), maxLines = 1) }
+        },
+    )
 }
 
 /** Picks one of [options]. The radio has no click of its own, so a TV remote stops once per row. */
