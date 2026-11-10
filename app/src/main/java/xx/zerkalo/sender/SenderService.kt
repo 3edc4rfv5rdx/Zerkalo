@@ -1,5 +1,6 @@
 package xx.zerkalo.sender
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -16,6 +17,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -38,6 +40,7 @@ class SenderService : Service() {
     private var projection: MediaProjection? = null
     private var encoder: ScreenEncoder? = null
     private var wifiLock: WifiManager.WifiLock? = null
+    private var screenLock: PowerManager.WakeLock? = null
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() = SenderSession.disconnect()
@@ -82,6 +85,7 @@ class SenderService : Service() {
         // Android 14 refuses a virtual display unless this is registered first.
         captured.registerCallback(projectionCallback, mainHandler)
         wifiLock = acquireLowLatencyWifi(this)
+        screenLock = keepScreenDimmed()
 
         val started = ScreenEncoder(
             this,
@@ -113,10 +117,21 @@ class SenderService : Service() {
         projection = null
         wifiLock?.release()
         wifiLock = null
+        screenLock?.release()
+        screenLock = null
         // Stopped from outside (by the system) with the connection still up.
         SenderSession.disconnect()
         super.onDestroy()
     }
+
+    /** Capture ends when the screen goes off, so the timeout must not get there; dimming is fine. */
+    @SuppressLint("WakelockTimeout") // Held for the session and released in onDestroy.
+    @Suppress("DEPRECATION") // The replacement, FLAG_KEEP_SCREEN_ON, needs a window, and this runs behind other apps.
+    private fun keepScreenDimmed(): PowerManager.WakeLock =
+        getSystemService(PowerManager::class.java).newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "zerkalo:mirroring").also {
+            it.setReferenceCounted(false)
+            it.acquire()
+        }
 
     private fun buildNotification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)

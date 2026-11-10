@@ -261,7 +261,7 @@ holes for NACK, a change of `configId`.
 5. Resilience: NACK, key frame requests, clocked playout, screen rotation.
 6. H.265, quality and frame rate settings.
 7. Later: sound.
-8. Later: keep the sender's screen from going off by timeout during mirroring, while letting it dim (`SCREEN_DIM_WAKE_LOCK`).
+8. Keep the sender's screen from going off by timeout during mirroring, while letting it dim (`SCREEN_DIM_WAKE_LOCK`).
 
 ## To check on hardware
 
