@@ -31,7 +31,7 @@ class ReceiverRowsTest {
 
     @Test
     fun heardAddressAndNameBeatRememberedOnes() {
-        assertEquals(listOf(ConnectTarget("a", "TV", "10.0.0.5", 5000)), receiverRows(listOf(found("a")), listOf(paired("a"))))
+        assertEquals(listOf(ConnectTarget("a", "TV", "10.0.0.5", 5000, online = true)), receiverRows(listOf(found("a")), listOf(paired("a"))))
     }
 
     @Test

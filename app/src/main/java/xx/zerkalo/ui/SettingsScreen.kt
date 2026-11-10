@@ -84,6 +84,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             iconFirst = true,
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            GroupHeader(stringResource(R.string.group_device))
             SettingRow(stringResource(R.string.setting_role), stringResource(role.labelRes())) {
                 editing = Editing.ROLE
             }
@@ -95,8 +96,8 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             SettingRow(stringResource(R.string.setting_paired), "") {
                 editing = Editing.PAIRED
             }
-            HorizontalDivider()
             if (role == Role.SENDER) {
+                GroupHeader(stringResource(R.string.mirroring_settings))
                 SettingRow(stringResource(R.string.setting_codec), videoCodec.label) {
                     editing = Editing.CODEC
                 }
@@ -108,16 +109,16 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 SettingRow(stringResource(R.string.setting_quality), stringResource(quality.labelRes())) {
                     editing = Editing.QUALITY
                 }
-                HorizontalDivider()
             }
             if (role == Role.RECEIVER) {
+                GroupHeader(stringResource(R.string.group_sound))
                 SwitchRow(stringResource(R.string.setting_audio_auto_sync), audioAutoSync) {
                     AppSettings.setAudioAutoSync(context, it)
                 }
                 HorizontalDivider()
                 AudioOffsetRow(audioOffsetMs) { AppSettings.setAudioOffsetMs(context, it) }
-                HorizontalDivider()
             }
+            GroupHeader(stringResource(R.string.group_appearance))
             SettingRow(stringResource(R.string.setting_theme), stringResource(themeMode.labelRes())) {
                 editing = Editing.THEME
             }
@@ -128,7 +129,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             ) {
                 Text(
                     text = stringResource(R.string.setting_accent),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
                 AccentSwatch(accentAt(accentIndex), selected = false, onClick = { editing = Editing.ACCENT })
@@ -137,7 +138,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             SettingRow(stringResource(R.string.setting_language), languageLabel) {
                 editing = Editing.LANGUAGE
             }
-            HorizontalDivider()
+            GroupHeader(stringResource(R.string.group_app))
             SwitchRow(stringResource(R.string.setting_update_check), updateCheck) {
                 updateCheck = it
                 Updater.setEnabled(context, it)
@@ -258,13 +259,23 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
 }
 
 @Composable
+private fun GroupHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
 private fun SettingRow(label: String, value: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -274,7 +285,7 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }
@@ -288,7 +299,7 @@ private fun AudioOffsetRow(offset: Int, onChange: (Int) -> Unit) {
     ) {
         Text(
             text = stringResource(R.string.setting_audio_offset),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
         FilledTonalButton(onClick = { onChange(offset - AUDIO_OFFSET_STEP_MS) }) { Text("\u2212", maxLines = 1) }
@@ -369,7 +380,7 @@ private fun <T> ChoiceDialog(
                         RadioButton(selected = option == selected, onClick = null)
                         Text(
                             text = label(option),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }

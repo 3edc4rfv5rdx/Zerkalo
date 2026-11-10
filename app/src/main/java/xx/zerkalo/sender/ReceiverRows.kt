@@ -10,7 +10,7 @@ import xx.zerkalo.settings.PairedDevice
  * that is heard takes its current address and name from the network.
  */
 fun receiverRows(found: List<FoundReceiver>, remembered: List<PairedDevice>): List<ConnectTarget> {
-    val heard = found.map { ConnectTarget(it.id, it.name, it.host, it.port) }
+    val heard = found.map { ConnectTarget(it.id, it.name, it.host, it.port, online = true) }
     val heardIds = found.map { it.id }.toSet()
     val silent = remembered.filterNot { it.id in heardIds }.map { ConnectTarget(it.id, it.name, it.host, CONTROL_PORT) }
     return heard + silent

@@ -51,10 +51,17 @@
     <string name="setting_audio_auto_sync">Automatic sound sync</string>
     <string name="setting_audio_offset">Sound offset</string>
     <string name="unit_ms">ms</string>
-    <string name="send_file">Send a file</string>
-    <string name="file_pick_receiver">Choose a receiver for this file</string>
+    <string name="file_pick_receiver">Choose a receiver, then a file</string>
     <string name="serving_file">Serving a file</string>
     <string name="error_file">Could not open the file</string>
     <string name="error_no_player">No app on this device can play the file</string>
     <string name="setting_accent">Color</string>
+    <string name="waiting_connection">Waiting for a connection</string>
+    <string name="group_device">Device</string>
+    <string name="mirroring_settings">Mirroring</string>
+    <string name="group_sound">Sound</string>
+    <string name="group_appearance">Appearance</string>
+    <string name="group_app">App</string>
+    <string name="mode_mirror">Mirror</string>
+    <string name="mode_file">File</string>
 </resources>

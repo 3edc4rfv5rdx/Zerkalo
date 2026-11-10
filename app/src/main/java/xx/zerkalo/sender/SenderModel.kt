@@ -25,11 +25,14 @@ import xx.zerkalo.settings.PairedDevices
 import xx.zerkalo.toHex
 import kotlin.concurrent.thread
 
+/** What choosing a receiver does: shows it this screen, or sends it a file. */
+enum class SenderMode { MIRROR, FILE }
+
 /** A file picked by the user. */
 data class FileChoice(val uri: Uri, val name: String)
 
-/** Where to connect. [id] is null for an address typed in by hand. */
-data class ConnectTarget(val id: String?, val name: String, val host: String, val port: Int)
+/** Where to connect. [id] is null for an address typed in by hand. [online]: heard on the network just now. */
+data class ConnectTarget(val id: String?, val name: String, val host: String, val port: Int, val online: Boolean = false)
 
 /** The sender screen's side of things: finding receivers and starting a connection to one. */
 class SenderModel(application: Application) : AndroidViewModel(application) {
@@ -42,10 +45,31 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
     private var multicastLock: WifiManager.MulticastLock? = null
     private var pending: ConnectTarget? = null
 
+    private val _mode = MutableStateFlow(SenderMode.MIRROR)
+    val mode: StateFlow<SenderMode> = _mode.asStateFlow()
+
+    /** The receiver chosen in file mode, while the user picks the file for it. */
+    private var heldTarget: ConnectTarget? = null
+
     private val _fileToSend = MutableStateFlow<FileChoice?>(null)
 
-    /** The file picked and waiting for a receiver; with one, connecting sends it and does not mirror. */
+    /** The file on its way to a receiver; with one, connecting sends it and does not mirror. */
     val fileToSend: StateFlow<FileChoice?> = _fileToSend.asStateFlow()
+
+    fun setMode(mode: SenderMode) {
+        _mode.value = mode
+        // Left over from a failed attempt, it would turn the next mirroring into a file.
+        _fileToSend.value = null
+    }
+
+    /** Remembers the receiver a file is about to be picked for. */
+    fun holdTarget(target: ConnectTarget) {
+        heldTarget = target
+    }
+
+    fun releaseTarget() {
+        heldTarget = null
+    }
 
     /** The name of the file being served, if one is. */
     val servingFile: StateFlow<String?> = FileSession.serving
@@ -69,12 +93,10 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
                 fail(R.string.error_file)
             } else {
                 _fileToSend.value = FileChoice(uri, info.name)
+                heldTarget?.let(::connect)
+                heldTarget = null
             }
         }
-    }
-
-    fun cancelFile() {
-        _fileToSend.value = null
     }
 
     /** Starts serving the picked file over the connection just made. */
@@ -118,9 +140,7 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
         _found.value = emptyList()
     }
 
-    fun connectByAddress(host: String) {
-        connect(ConnectTarget(null, host, host, CONTROL_PORT))
-    }
+    fun targetAt(host: String): ConnectTarget = ConnectTarget(null, host, host, CONTROL_PORT)
 
     fun connect(target: ConnectTarget) {
         when (status.value) {

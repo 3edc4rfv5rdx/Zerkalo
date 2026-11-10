@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
@@ -59,20 +63,35 @@ fun ReceiverScreen(model: ReceiverModel) {
         VideoView(model, state.videoWidth, state.videoHeight)
         return
     }
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-    ) {
+    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         if (state.portTaken) {
             Text(stringResource(R.string.error_port), style = MaterialTheme.typography.headlineSmall)
         } else {
-            Text(name, style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.pin_label), style = MaterialTheme.typography.titleLarge)
-            Text(pin, style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
-            state.addresses.forEach { Text(it, style = MaterialTheme.typography.titleLarge) }
-            if (state.noPlayer) {
-                Text(stringResource(R.string.error_no_player), color = MaterialTheme.colorScheme.error)
+            Card(Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(name, style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.waiting_connection), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = stringResource(R.string.pin_label),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                    Text(
+                        text = pin,
+                        style = MaterialTheme.typography.displayLarge,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    state.addresses.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    if (state.noPlayer) {
+                        Text(stringResource(R.string.error_no_player), color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         }
     }

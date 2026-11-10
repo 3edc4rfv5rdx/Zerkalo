@@ -51,10 +51,17 @@
     <string name="setting_audio_auto_sync">Автопідлаштування звуку</string>
     <string name="setting_audio_offset">Зсув звуку</string>
     <string name="unit_ms">мс</string>
-    <string name="send_file">Надіслати файл</string>
-    <string name="file_pick_receiver">Виберіть приймач для файлу</string>
+    <string name="file_pick_receiver">Виберіть приймач, потім файл</string>
     <string name="serving_file">Роздається файл</string>
     <string name="error_file">Не вдалося відкрити файл</string>
     <string name="error_no_player">На цьому пристрої немає застосунку для цього файлу</string>
     <string name="setting_accent">Колір</string>
+    <string name="waiting_connection">Очікування підключення</string>
+    <string name="group_device">Пристрій</string>
+    <string name="mirroring_settings">Трансляція</string>
+    <string name="group_sound">Звук</string>
+    <string name="group_appearance">Оформлення</string>
+    <string name="group_app">Застосунок</string>
+    <string name="mode_mirror">Дзеркало</string>
+    <string name="mode_file">Файл</string>
 </resources>
