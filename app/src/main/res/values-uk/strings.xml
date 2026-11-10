@@ -56,4 +56,5 @@
     <string name="serving_file">Роздається файл</string>
     <string name="error_file">Не вдалося відкрити файл</string>
     <string name="error_no_player">На цьому пристрої немає застосунку для цього файлу</string>
+    <string name="setting_accent">Колір</string>
 </resources>

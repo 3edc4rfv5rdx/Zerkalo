@@ -56,4 +56,5 @@
     <string name="serving_file">Раздаётся файл</string>
     <string name="error_file">Не удалось открыть файл</string>
     <string name="error_no_player">На этом устройстве нет приложения для этого файла</string>
+    <string name="setting_accent">Цвет</string>
 </resources>

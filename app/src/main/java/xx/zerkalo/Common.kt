@@ -5,6 +5,10 @@ package xx.zerkalo
 
 const val PROTOCOL_VERSION = 1
 
+/** How many accents the palette offers; the colours themselves are in ui/Common.kt. */
+const val ACCENT_COUNT = 6
+const val DEFAULT_ACCENT_INDEX = 1
+
 const val CONTROL_PORT = 47700
 const val DISCOVERY_PORT = 47701
 const val VIDEO_PORT = 47702

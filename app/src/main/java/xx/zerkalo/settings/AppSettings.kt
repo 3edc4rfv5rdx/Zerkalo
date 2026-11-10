@@ -9,7 +9,9 @@ import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import xx.zerkalo.ACCENT_COUNT
 import xx.zerkalo.AUDIO_OFFSET_MAX_MS
+import xx.zerkalo.DEFAULT_ACCENT_INDEX
 import xx.zerkalo.ID_SIZE
 import xx.zerkalo.parseHex
 import xx.zerkalo.toHex
@@ -40,6 +42,7 @@ fun defaultRole(context: Context): Role {
 object AppSettings {
     private const val PREFS = "zerkalo"
     private const val KEY_THEME = "theme_mode"
+    private const val KEY_ACCENT = "accent_index"
     private const val KEY_LANGUAGE = "language"
     private const val KEY_ROLE = "role"
     private const val KEY_DEVICE_ID = "device_id"
@@ -52,6 +55,9 @@ object AppSettings {
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _accentIndex = MutableStateFlow(DEFAULT_ACCENT_INDEX)
+    val accentIndex: StateFlow<Int> = _accentIndex.asStateFlow()
 
     private val _role = MutableStateFlow(Role.SENDER)
     val role: StateFlow<Role> = _role.asStateFlow()
@@ -80,6 +86,7 @@ object AppSettings {
     fun load(context: Context) {
         val prefs = prefs(context)
         _themeMode.value = enumOr(prefs.getString(KEY_THEME, null), ThemeMode.SYSTEM)
+        _accentIndex.value = prefs.getInt(KEY_ACCENT, DEFAULT_ACCENT_INDEX).coerceIn(0, ACCENT_COUNT - 1)
         _role.value = enumOr(prefs.getString(KEY_ROLE, null), defaultRole(context))
         _deviceName.value = prefs.getString(KEY_DEVICE_NAME, null) ?: Build.MODEL.orEmpty()
         _videoCodec.value = enumOr(prefs.getString(KEY_VIDEO_CODEC, null), VideoCodec.H264)
@@ -110,6 +117,12 @@ object AppSettings {
     fun setThemeMode(context: Context, mode: ThemeMode) {
         _themeMode.value = mode
         prefs(context).edit { putString(KEY_THEME, mode.name) }
+    }
+
+    fun setAccentIndex(context: Context, index: Int) {
+        val clamped = index.coerceIn(0, ACCENT_COUNT - 1)
+        _accentIndex.value = clamped
+        prefs(context).edit { putInt(KEY_ACCENT, clamped) }
     }
 
     fun setRole(context: Context, role: Role) {

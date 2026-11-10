@@ -56,4 +56,5 @@
     <string name="serving_file">Serving a file</string>
     <string name="error_file">Could not open the file</string>
     <string name="error_no_player">No app on this device can play the file</string>
+    <string name="setting_accent">Color</string>
 </resources>

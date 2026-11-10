@@ -2,6 +2,7 @@ package xx.zerkalo.ui
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,7 +51,7 @@ import xx.zerkalo.video.Quality
 import xx.zerkalo.video.VideoCodec
 
 /** Which editor is open; only one can be at a time. */
-private enum class Editing { NONE, ROLE, NAME, PAIRED, CODEC, FRAME_RATE, QUALITY, THEME, LANGUAGE }
+private enum class Editing { NONE, ROLE, NAME, PAIRED, CODEC, FRAME_RATE, QUALITY, THEME, ACCENT, LANGUAGE }
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
@@ -58,6 +59,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
     val activity = LocalActivity.current
     val role by AppSettings.role.collectAsState()
     val themeMode by AppSettings.themeMode.collectAsState()
+    val accentIndex by AppSettings.accentIndex.collectAsState()
     val deviceName by AppSettings.deviceName.collectAsState()
     val videoCodec by AppSettings.videoCodec.collectAsState()
     val frameRate by AppSettings.frameRate.collectAsState()
@@ -118,6 +120,18 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             }
             SettingRow(stringResource(R.string.setting_theme), stringResource(themeMode.labelRes())) {
                 editing = Editing.THEME
+            }
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { editing = Editing.ACCENT }.padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.setting_accent),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                AccentSwatch(accentAt(accentIndex), selected = false, onClick = { editing = Editing.ACCENT })
             }
             HorizontalDivider()
             SettingRow(stringResource(R.string.setting_language), languageLabel) {
@@ -205,6 +219,24 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             onPick = {
                 AppSettings.setThemeMode(context, it)
                 editing = Editing.NONE
+            },
+        )
+
+        Editing.ACCENT -> AlertDialog(
+            onDismissRequest = { editing = Editing.NONE },
+            title = { Text(stringResource(R.string.setting_accent)) },
+            text = {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    AccentPalette.forEachIndexed { index, color ->
+                        AccentSwatch(color, selected = index == accentIndex, onClick = {
+                            AppSettings.setAccentIndex(context, index)
+                            editing = Editing.NONE
+                        })
+                    }
+                }
+            },
+            confirmButton = {
+                FilledTonalButton(onClick = { editing = Editing.NONE }) { Text(stringResource(R.string.cancel), maxLines = 1) }
             },
         )
 

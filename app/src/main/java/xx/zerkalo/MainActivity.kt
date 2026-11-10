@@ -49,11 +49,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by AppSettings.themeMode.collectAsState()
+            val accentIndex by AppSettings.accentIndex.collectAsState()
             // The window is outside the composition: a theme changed in
             // Settings is carried out to the bars by hand.
             LaunchedEffect(themeMode) { applyWindowTheme() }
 
-            ZerkaloTheme(themeMode) {
+            ZerkaloTheme(themeMode, accentIndex) {
                 App(sender = senderModel, receiver = receiverModel, onAbout = ::showAbout)
             }
         }

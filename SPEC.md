@@ -240,7 +240,7 @@ Sound is captured, encoded and sent beside the video, with the same protocol ver
 | Sound offset | receiver | −80 to +80 ms in steps of 10, default 0, above zero is later |
 | Device name | both | `Build.MODEL` by default |
 | Remembered devices | both | list with removal |
-| Language, theme | both | as in the other apps |
+| Language, theme, accent color | both | as in the other apps |
 
 ## Code structure
 
