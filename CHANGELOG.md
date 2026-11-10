@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- I: 23-ToUpdate.sh publishes the manifest the in-app updater reads.
 ## v0.1.9 (2026-11-10)
 - I: ADD is tracked by git, and local files such as test videos live in the ignored tmp folder.
 - I: The Russian specification stays beside the English one.
