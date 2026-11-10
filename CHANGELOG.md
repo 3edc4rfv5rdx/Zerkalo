@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+## v0.2.13 (2026-11-10)
 - I: A send-a-file mode is in the plan.
 - N: The receiver can match sound to the picture by itself, can be told not to, and takes a manual offset of up to 80 ms.
 - N: The sound apps play goes to the receiver along with the picture.
