@@ -18,11 +18,13 @@ import xx.zerkalo.PROOF_SIZE
 import xx.zerkalo.PROTOCOL_VERSION
 import xx.zerkalo.VIDEO_FLAG_KEYFRAME
 import xx.zerkalo.VIDEO_HEADER_SIZE
+import xx.zerkalo.parseHex
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.OutputStream
+import java.net.URLEncoder
 import java.nio.ByteBuffer
 
 /** A message that does not follow the protocol. */
@@ -180,6 +182,10 @@ sealed class ControlMessage(internal val type: Int) {
     /** Sent only to a receiver whose AUTH_OK mask offers sound. */
     class AudioConfig(val sampleRate: Int, val channels: Int, val csd: ByteArray) : ControlMessage(TYPE_AUDIO_CONFIG)
 
+    /** The sender serves a file on [port] under [token]; the receiver should play it. */
+    data class PlayFile(val port: Int, val token: String, val name: String, val mime: String) :
+        ControlMessage(TYPE_PLAY_FILE)
+
     data class Error(val code: ErrorCode) : ControlMessage(TYPE_ERROR)
 
     internal fun payload(): ByteArray {
@@ -193,6 +199,7 @@ sealed class ControlMessage(internal val type: Int) {
             is Config -> writer.u16(configId).u8(codec).u16(width).u16(height).raw(csd)
             is Ready -> writer.u16(configId)
             is AudioConfig -> writer.u32(sampleRate.toLong()).u8(channels).raw(csd)
+            is PlayFile -> writer.u16(port).name(token).name(name).name(mime)
             is Error -> writer.u8(code.wire)
             KeyframeRequest, Ping, Bye -> Unit
         }
@@ -210,6 +217,7 @@ sealed class ControlMessage(internal val type: Int) {
         const val TYPE_PING = 0x08
         const val TYPE_BYE = 0x09
         const val TYPE_AUDIO_CONFIG = 0x0A
+        const val TYPE_PLAY_FILE = 0x0B
         const val TYPE_ERROR = 0x0F
     }
 }
@@ -232,6 +240,7 @@ internal fun decodeControl(type: Int, payload: ByteArray): ControlMessage {
         ControlMessage.TYPE_PING -> ControlMessage.Ping
         ControlMessage.TYPE_BYE -> ControlMessage.Bye
         ControlMessage.TYPE_AUDIO_CONFIG -> decodeAudioConfig(reader)
+        ControlMessage.TYPE_PLAY_FILE -> decodePlayFile(reader)
         ControlMessage.TYPE_ERROR -> ControlMessage.Error(ErrorCode.of(reader.u8()))
         else -> throw ProtocolException("Unknown message type $type")
     }
@@ -258,6 +267,20 @@ private fun decodeAudioConfig(reader: Reader): ControlMessage.AudioConfig {
     val csd = reader.rest()
     if (csd.isEmpty()) throw ProtocolException("No codec configuration")
     return ControlMessage.AudioConfig(sampleRate.toInt(), channels, csd)
+}
+
+private fun decodePlayFile(reader: Reader): ControlMessage.PlayFile {
+    val port = reader.u16()
+    val token = reader.name()
+    // Goes into an address that another app opens, so it is held to what it should be.
+    if (port == 0 || token.isEmpty() || parseHex(token) == null) throw ProtocolException("Bad file address")
+    return ControlMessage.PlayFile(port, token, reader.name(), reader.name())
+}
+
+/** The address a player opens for a file served by [host]. */
+fun fileUrl(host: String, port: Int, token: String, name: String): String {
+    val path = URLEncoder.encode(name.ifEmpty { "file" }, "UTF-8").replace("+", "%20")
+    return "http://$host:$port/$token/$path"
 }
 
 /** Writes [message] in a single call. Callers sharing [out] between threads must serialise their calls. */

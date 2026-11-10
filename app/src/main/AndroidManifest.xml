@@ -18,6 +18,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
+    <!-- Serving a file to the receiver with the phone's screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
     <!-- The low-latency Wi-Fi lock and the sender's dim-screen lock held during a session. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -60,6 +63,11 @@
             android:name=".sender.SenderService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection|microphone" />
+
+        <service
+            android:name=".sender.FileService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <!-- Hands the updater's downloaded APK to the system installer. -->
         <provider

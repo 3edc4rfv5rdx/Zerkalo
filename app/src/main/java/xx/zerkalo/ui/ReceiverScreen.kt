@@ -1,5 +1,8 @@
 package xx.zerkalo.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
@@ -15,20 +18,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.LifecycleStartEffect
 import xx.zerkalo.R
+import xx.zerkalo.receiver.PlayRequest
 import xx.zerkalo.receiver.ReceiverModel
 import xx.zerkalo.settings.AppSettings
 
@@ -42,6 +49,11 @@ fun ReceiverScreen(model: ReceiverModel) {
     val state by model.state.collectAsState()
     val pin by model.pin.collectAsState()
     val name by AppSettings.deviceName.collectAsState()
+    val request by model.playRequest.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(request) {
+        request?.let { model.onPlayRequestDone(openInPlayer(context, it)) }
+    }
 
     if (state.connectedTo != null) {
         VideoView(model, state.videoWidth, state.videoHeight)
@@ -59,8 +71,19 @@ fun ReceiverScreen(model: ReceiverModel) {
             Text(stringResource(R.string.pin_label), style = MaterialTheme.typography.titleLarge)
             Text(pin, style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
             state.addresses.forEach { Text(it, style = MaterialTheme.typography.titleLarge) }
+            if (state.noPlayer) {
+                Text(stringResource(R.string.error_no_player), color = MaterialTheme.colorScheme.error)
+            }
         }
     }
+}
+
+/** Hands the file to whatever plays it here; the system asks which app if there are several. */
+private fun openInPlayer(context: Context, request: PlayRequest): Boolean = try {
+    context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(request.url.toUri(), request.mime))
+    true
+} catch (ignored: ActivityNotFoundException) {
+    false
 }
 
 /** The stream on a black screen, proportions kept, with the system bars out of the way. */

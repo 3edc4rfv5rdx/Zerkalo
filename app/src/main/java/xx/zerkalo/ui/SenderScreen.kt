@@ -67,6 +67,8 @@ fun SenderScreen(model: SenderModel) {
     val remembered by PairedDevices.receivers.devices.collectAsState()
     val rows = remember(found, remembered) { receiverRows(found, remembered) }
     val status by model.status.collectAsState()
+    val fileToSend by model.fileToSend.collectAsState()
+    val servingFile by model.servingFile.collectAsState()
     var enteringAddress by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -78,6 +80,9 @@ fun SenderScreen(model: SenderModel) {
             model.disconnect()
         }
     }
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(model::pickFile)
+    }
     val askPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         // Mirroring works either way; without them there is no sound or no Stop button in the shade.
     }
@@ -88,10 +93,14 @@ fun SenderScreen(model: SenderModel) {
     }
     // Keyed on the status itself: each new connection asks for capture once.
     LaunchedEffect(status) {
-        if (status is SenderStatus.Connected) capture.launch(screenCaptureIntent(context))
+        if (status is SenderStatus.Connected) {
+            if (model.fileToSend.value != null) model.startFile() else capture.launch(screenCaptureIntent(context))
+        }
     }
 
-    (status as? SenderStatus.Streaming)?.let { StreamingPanel(it.name, model::disconnect) } ?: Column(
+    val panel = servingFile?.let { ActivePanelText(stringResource(R.string.serving_file), it, model::stopServing) }
+        ?: (status as? SenderStatus.Streaming)?.let { ActivePanelText(stringResource(R.string.mirroring), it.name, model::disconnect) }
+    panel?.let { ActivePanel(it) } ?: Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -118,6 +127,16 @@ fun SenderScreen(model: SenderModel) {
                 }
                 FilledTonalButton(onClick = { enteringAddress = true }) {
                     Text(stringResource(R.string.enter_address))
+                }
+                val chosen = fileToSend
+                if (chosen == null) {
+                    FilledTonalButton(onClick = { pickFile.launch(arrayOf("*/*")) }) {
+                        Text(stringResource(R.string.send_file))
+                    }
+                } else {
+                    Text(stringResource(R.string.file_pick_receiver), style = MaterialTheme.typography.titleMedium)
+                    Text(chosen.name, style = MaterialTheme.typography.bodyMedium)
+                    FilledTonalButton(onClick = model::cancelFile) { Text(stringResource(R.string.cancel)) }
                 }
             }
         }
@@ -154,9 +173,11 @@ private fun missingPermissions(context: Context): Array<String> {
     return wanted.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }.toTypedArray()
 }
 
-/** Fills the screen while mirroring, so there is no doubt that it is under way. */
+private class ActivePanelText(val title: String, val name: String, val onStop: () -> Unit)
+
+/** Fills the screen while the phone is working for a receiver, so there is no doubt that it is. */
 @Composable
-private fun StreamingPanel(name: String, onStop: () -> Unit) {
+private fun ActivePanel(text: ActivePanelText) {
     val activity = LocalActivity.current
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -169,10 +190,10 @@ private fun StreamingPanel(name: String, onStop: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(72.dp),
         )
-        Text(stringResource(R.string.mirroring), style = MaterialTheme.typography.headlineMedium)
-        Text(name, style = MaterialTheme.typography.titleLarge)
+        Text(text.title, style = MaterialTheme.typography.headlineMedium)
+        Text(text.name, style = MaterialTheme.typography.titleLarge)
         Button(onClick = { activity?.moveTaskToBack(true) }) { Text(stringResource(R.string.minimize)) }
-        FilledTonalButton(onClick = onStop) { Text(stringResource(R.string.stop)) }
+        FilledTonalButton(onClick = text.onStop) { Text(stringResource(R.string.stop)) }
     }
 }
 

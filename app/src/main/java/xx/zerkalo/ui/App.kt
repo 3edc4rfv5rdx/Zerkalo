@@ -59,8 +59,9 @@ fun App(sender: SenderModel, receiver: ReceiverModel, onAbout: () -> Unit) {
                             },
                             iconFirst = false,
                             extra = BarAction(Icons.Filled.Close, stringResource(R.string.exit)) {
-                                // The capture service would outlive the activity otherwise.
+                                // The services would outlive the activity otherwise.
                                 sender.disconnect()
+                                sender.stopServing()
                                 activity?.finishAndRemoveTask()
                             },
                         )

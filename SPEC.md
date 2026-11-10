@@ -61,6 +61,7 @@ Manifest as in PhotoBox: `LEANBACK_LAUNCHER`, `android:banner`, `touchscreen` an
 | 47700 | TCP | control, the receiver listens |
 | 47701 | UDP | receiver announcements, the sender listens |
 | 47702 | UDP | video, the receiver listens |
+| 47703 | TCP | HTTP file serving, the sender listens |
 
 All numbers are big-endian. A string is a `u16` length and UTF-8 bytes. Protocol version
 `PROTOCOL_VERSION = 1`.
@@ -95,6 +96,7 @@ connection first.
 | 0x07 | R→S | KEYFRAME_REQUEST | none |
 | 0x08 | both | PING | none |
 | 0x09 | both | BYE | none |
+| 0x0B | S→R | PLAY_FILE | `u16 port`, `string token` (hex), `string name`, `string mime` |
 | 0x0F | R→S | ERROR | `u8 code` (1 busy, 2 wrong PIN, 3 unknown token, 4 version) |
 
 `codec` values: 0 is H.264, 1 is H.265.
@@ -267,7 +269,8 @@ holes for NACK, a change of `configId`.
 6. H.265, quality and frame rate settings.
 7. Sound.
 8. Keep the sender's screen from going off by timeout during mirroring, while letting it dim (`SCREEN_DIM_WAKE_LOCK`).
-9. Later: a "send a file" mode beside the mirror. The phone serves the file over HTTP with range requests and the TV box plays it itself through Media3, with no re-encoding, so quality is the original, sound and seeking come for free and the phone's screen can be off.
+9. A "send a file" mode beside the mirror. The phone serves the file over HTTP with range requests, under a random token in the address, and the receiver opens that address in an external player through `ACTION_VIEW`. Control is only used to deliver the address: the receiver leaves its screen when the player opens, so serving goes on by itself until stopped on the phone.
+10. A built-in Media3 player, with a receiver setting to choose between it and an external one.
 
 ## To check on hardware
 

@@ -2,6 +2,8 @@ package xx.zerkalo.sender
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
+import android.content.Intent
 import android.net.wifi.WifiManager
 import android.os.SystemClock
 import androidx.annotation.StringRes
@@ -23,6 +25,9 @@ import xx.zerkalo.settings.PairedDevices
 import xx.zerkalo.toHex
 import kotlin.concurrent.thread
 
+/** A file picked by the user. */
+data class FileChoice(val uri: Uri, val name: String)
+
 /** Where to connect. [id] is null for an address typed in by hand. */
 data class ConnectTarget(val id: String?, val name: String, val host: String, val port: Int)
 
@@ -36,6 +41,52 @@ class SenderModel(application: Application) : AndroidViewModel(application) {
     private var listener: AnnounceListener? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var pending: ConnectTarget? = null
+
+    private val _fileToSend = MutableStateFlow<FileChoice?>(null)
+
+    /** The file picked and waiting for a receiver; with one, connecting sends it and does not mirror. */
+    val fileToSend: StateFlow<FileChoice?> = _fileToSend.asStateFlow()
+
+    /** The name of the file being served, if one is. */
+    val servingFile: StateFlow<String?> = FileSession.serving
+
+    fun pickFile(uri: Uri) {
+        val context = getApplication<Application>()
+        thread(isDaemon = true, name = "file-pick") {
+            try {
+                // Otherwise the permission to read it ends with the activity, and serving goes on after that.
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (ignored: SecurityException) {
+                // Not every provider offers this; the file can still be read for now.
+            }
+            val info = try {
+                describeFile(context, uri)
+            } catch (ignored: Exception) {
+                // Providers fail in many ways; each one means this file cannot be sent.
+                null
+            }
+            if (info == null) {
+                fail(R.string.error_file)
+            } else {
+                _fileToSend.value = FileChoice(uri, info.name)
+            }
+        }
+    }
+
+    fun cancelFile() {
+        _fileToSend.value = null
+    }
+
+    /** Starts serving the picked file over the connection just made. */
+    fun startFile() {
+        val choice = _fileToSend.value ?: return
+        _fileToSend.value = null
+        FileService.start(getApplication(), choice.uri)
+    }
+
+    fun stopServing() {
+        FileService.stop(getApplication())
+    }
 
     fun startDiscovery() {
         if (listener != null) return

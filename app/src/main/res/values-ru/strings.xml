@@ -51,4 +51,9 @@
     <string name="setting_audio_auto_sync">Автоподстройка звука</string>
     <string name="setting_audio_offset">Сдвиг звука</string>
     <string name="unit_ms">мс</string>
+    <string name="send_file">Отправить файл</string>
+    <string name="file_pick_receiver">Выберите приёмник для файла</string>
+    <string name="serving_file">Раздаётся файл</string>
+    <string name="error_file">Не удалось открыть файл</string>
+    <string name="error_no_player">На этом устройстве нет приложения для этого файла</string>
 </resources>

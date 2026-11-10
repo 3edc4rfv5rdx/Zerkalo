@@ -8,6 +8,7 @@ const val PROTOCOL_VERSION = 1
 const val CONTROL_PORT = 47700
 const val DISCOVERY_PORT = 47701
 const val VIDEO_PORT = 47702
+const val FILE_PORT = 47703
 
 const val ANNOUNCE_MAGIC = "ZRKL"
 
@@ -39,6 +40,12 @@ const val CODEC_H265 = 1
 
 /** A receiver that can play sound sets this bit in AUTH_OK's mask. AAC, as every Android since 9 decodes it the same way. */
 const val CODEC_AUDIO_AAC = 4
+
+/** Random bytes in a served file's address; the address is all a player has to prove itself with. */
+const val FILE_TOKEN_SIZE = 16
+const val HTTP_MAX_HEAD_BYTES = 8_192
+const val HTTP_READ_TIMEOUT_MS = 10_000
+const val HTTP_COPY_BUFFER = 64 * 1024
 
 const val PIN_LENGTH = 4
 const val PIN_MAX_FAILURES = 3

@@ -17,6 +17,7 @@ import xx.zerkalo.net.ControlMessage
 import xx.zerkalo.net.PinGuard
 import xx.zerkalo.net.ReceiverServer
 import xx.zerkalo.net.codecMaskOf
+import xx.zerkalo.net.fileUrl
 import xx.zerkalo.net.localIpv4Addresses
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
@@ -28,6 +29,7 @@ import kotlin.concurrent.thread
 /**
  * [connectedTo] is the sender's name during a session. [portTaken]: another app holds
  * the control port. [videoWidth] and [videoHeight] are zero until the stream is described.
+ * [noPlayer]: nothing on this device could open the last file.
  */
 data class ReceiverState(
     val connectedTo: String? = null,
@@ -35,12 +37,19 @@ data class ReceiverState(
     val addresses: List<String> = emptyList(),
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
+    val noPlayer: Boolean = false,
 )
+
+/** A file the sender wants played, not yet handed to a player. */
+data class PlayRequest(val url: String, val mime: String)
 
 /** The receiver's network side, running while its screen is on show. */
 class ReceiverModel(application: Application) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(ReceiverState())
     val state: StateFlow<ReceiverState> = _state.asStateFlow()
+
+    private val _playRequest = MutableStateFlow<PlayRequest?>(null)
+    val playRequest: StateFlow<PlayRequest?> = _playRequest.asStateFlow()
 
     private val _pin = MutableStateFlow("")
     val pin: StateFlow<String> = _pin.asStateFlow()
@@ -58,6 +67,9 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
     @Volatile
     private var surface: Surface? = null
 
+    @Volatile
+    private var senderHost = ""
+
     private var wifiLock: WifiManager.WifiLock? = null
 
     fun start() {
@@ -74,6 +86,8 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
                 when (message) {
                     is ControlMessage.Config -> session?.onConfig(message)
                     is ControlMessage.AudioConfig -> session?.onAudioConfig(message)
+                    is ControlMessage.PlayFile ->
+                        _playRequest.value = PlayRequest(fileUrl(senderHost, message.port, message.token, message.name), message.mime)
                     else -> Unit
                 }
             }
@@ -95,6 +109,8 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun beginSession(owner: ReceiverServer, senderName: String, host: String) {
+        senderHost = host
+        update { copy(noPlayer = false) }
         val created = ReceiverSession(
             senderHost = host,
             sendReady = { configId -> owner.send(ControlMessage.Ready(configId)) },
@@ -125,6 +141,12 @@ class ReceiverModel(application: Application) : AndroidViewModel(application) {
     fun setSurface(newSurface: Surface?) {
         surface = newSurface
         session?.setSurface(newSurface)
+    }
+
+    /** The current request has been handed over, or [opened] says that nothing could take it. */
+    fun onPlayRequestDone(opened: Boolean) {
+        _playRequest.value = null
+        if (!opened) update { copy(noPlayer = true) }
     }
 
     /** Ends the current session; the receiver goes back to waiting. */

@@ -51,4 +51,9 @@
     <string name="setting_audio_auto_sync">Автопідлаштування звуку</string>
     <string name="setting_audio_offset">Зсув звуку</string>
     <string name="unit_ms">мс</string>
+    <string name="send_file">Надіслати файл</string>
+    <string name="file_pick_receiver">Виберіть приймач для файлу</string>
+    <string name="serving_file">Роздається файл</string>
+    <string name="error_file">Не вдалося відкрити файл</string>
+    <string name="error_no_player">На цьому пристрої немає застосунку для цього файлу</string>
 </resources>

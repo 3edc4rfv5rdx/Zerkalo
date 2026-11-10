@@ -306,4 +306,26 @@ class ProtocolTest {
         assertNull(AudioPacket.parse(good.copyOf().also { it[0] = 0x10 }, good.size))
         assertNull(AudioPacket.parse(ByteArray(MAX_DATAGRAM + 1), MAX_DATAGRAM + 1))
     }
+
+    @Test
+    fun playFileRoundTrips() {
+        val message = ControlMessage.PlayFile(47703, "ab12", "Кино.mkv", "video/x-matroska")
+        assertEquals(message, read(encoded(message)))
+    }
+
+    @Test
+    fun playFileWithATokenThatIsNotHexIsRefused() {
+        val bytes = encoded(ControlMessage.PlayFile(47703, "ab/12x", "a", "video/*"))
+        assertThrows(ProtocolException::class.java) { read(bytes) }
+    }
+
+    @Test
+    fun fileUrlEncodesTheName() {
+        assertEquals("http://10.0.0.5:47703/ab12/%D0%9A%20a%2Fb.mkv", fileUrl("10.0.0.5", 47703, "ab12", "К a/b.mkv"))
+    }
+
+    @Test
+    fun fileUrlHasAPathEvenWithoutAName() {
+        assertEquals("http://10.0.0.5:47703/ab12/file", fileUrl("10.0.0.5", 47703, "ab12", ""))
+    }
 }

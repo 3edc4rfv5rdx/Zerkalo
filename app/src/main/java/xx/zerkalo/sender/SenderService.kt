@@ -3,10 +3,6 @@ package xx.zerkalo.sender
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -20,20 +16,16 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
-import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import xx.zerkalo.CODEC_AUDIO_AAC
-import xx.zerkalo.MainActivity
 import xx.zerkalo.R
 import xx.zerkalo.net.codecMaskHas
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.localizedContext
 import xx.zerkalo.video.acquireLowLatencyWifi
 
-private const val CHANNEL_ID = "mirroring"
-private const val NOTIFICATION_ID = 1
 private const val ACTION_STOP = "xx.zerkalo.STOP"
 private const val EXTRA_RESULT_CODE = "result_code"
 private const val EXTRA_RESULT_DATA = "result_data"
@@ -74,7 +66,7 @@ class SenderService : Service() {
         if (canCaptureSound && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         }
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(), type)
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, senderNotification(this, getString(R.string.mirroring), ACTION_STOP), type)
 
         val channel = SenderSession.channel
         val data = intent?.let { IntentCompat.getParcelableExtra(it, EXTRA_RESULT_DATA, Intent::class.java) }
@@ -155,32 +147,6 @@ class SenderService : Service() {
             it.setReferenceCounted(false)
             it.acquire()
         }
-
-    private fun buildNotification(): Notification {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, getString(R.string.notification_channel), NotificationManager.IMPORTANCE_LOW),
-        )
-        val open = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val stop = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, SenderService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.mirroring))
-            .setContentIntent(open)
-            .setOngoing(true)
-            .addAction(0, getString(R.string.stop), stop)
-            .build()
-    }
 
     companion object {
         /** Starts mirroring with the result of the system's screen capture dialog. */
