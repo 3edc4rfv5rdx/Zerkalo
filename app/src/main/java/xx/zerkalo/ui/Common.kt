@@ -134,11 +134,11 @@ class BarAction(val icon: ImageVector, val description: String, val onClick: () 
 
 /**
  * The title with one icon, before it when [iconFirst] and after it otherwise, and
- * optionally an [extra] icon at the start of the bar. The first icon
- * takes the focus when the bar appears, so a TV remote has somewhere to start from.
+ * optionally an [extra] icon at the start of the bar and a [trailing] one at its end. The
+ * first icon takes the focus when the bar appears, so a TV remote has somewhere to start from.
  */
 @Composable
-fun TopBar(title: String, action: BarAction, iconFirst: Boolean, extra: BarAction? = null) {
+fun TopBar(title: String, action: BarAction, iconFirst: Boolean, extra: BarAction? = null, trailing: BarAction? = null) {
     val focus = remember { FocusRequester() }
     val icon = @Composable {
         IconButton(onClick = action.onClick, modifier = Modifier.focusRequester(focus)) {
@@ -162,3 +162,6 @@ fun TopBar(title: String, action: BarAction, iconFirst: Boolean, extra: BarActio
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
 }
+        trailing?.let {
+            IconButton(onClick = it.onClick) { Icon(it.icon, contentDescription = it.description) }
+        }

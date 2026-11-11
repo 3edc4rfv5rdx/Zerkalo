@@ -13,6 +13,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -81,6 +82,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             title = stringResource(R.string.settings),
             action = BarAction(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), onBack),
             iconFirst = true,
+            trailing = BarAction(Icons.Outlined.Info, stringResource(R.string.about), onAbout),
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             GroupHeader(stringResource(R.string.group_device))
@@ -142,8 +144,6 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 updateCheck = it
                 Updater.setEnabled(context, it)
             }
-            HorizontalDivider()
-            SettingRow(stringResource(R.string.about), "", onAbout)
         }
     }
 
