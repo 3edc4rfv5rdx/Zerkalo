@@ -250,19 +250,25 @@ private fun ActivePanel(text: ActivePanelText) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_cast),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(72.dp),
-        )
-        Text(text.title, style = MaterialTheme.typography.headlineMedium)
-        Text(text.name, style = MaterialTheme.typography.titleLarge)
-        Button(onClick = { activity?.moveTaskToBack(true) }, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
-            Text(stringResource(R.string.minimize))
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_cast),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(72.dp),
+            )
+            Text(text.title, style = MaterialTheme.typography.headlineMedium)
+            Text(text.name, style = MaterialTheme.typography.titleLarge)
+            Button(onClick = { activity?.moveTaskToBack(true) }, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
+                Text(stringResource(R.string.minimize))
+            }
         }
+        // Apart from Minimize, so ending the session takes a deliberate reach.
         TonalButton(onClick = text.onStop, modifier = Modifier.widthIn(min = PANEL_BUTTON_WIDTH)) {
             Text(stringResource(R.string.stop))
         }
