@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+## v0.3.26 (2026-11-11)
 - E: On a phone lying on its side the receiver keeps its PIN and address in view, with the card packed tighter at the top.
 - N: The receiver can fill the screen with a landscape picture, cropping its edges, instead of fitting it whole.
 - I: 000-Push.sh pushes the current branch to GitHub.
