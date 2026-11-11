@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: All text is a fifth larger, and the receiver's PIN a size smaller to match.
 - F: About opens from an (i) in the settings' top bar, as in the other apps.
 - F: Pale buttons have an outline in the accent color.
 - F: Cards, grouped settings and a mirror or file switch on the sender make the screens clearer.

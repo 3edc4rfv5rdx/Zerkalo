@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import xx.zerkalo.ACCENT_COUNT
 import xx.zerkalo.settings.ThemeMode
@@ -93,9 +95,39 @@ fun isDarkTheme(mode: ThemeMode, systemInDark: Boolean): Boolean = when (mode) {
     ThemeMode.DARK -> true
 }
 
+/** How much larger than Material's defaults all text is, to be read from across a room. */
+private const val TEXT_SCALE = 1.2f
+
+private fun TextStyle.scaled(): TextStyle = copy(fontSize = fontSize * TEXT_SCALE, lineHeight = lineHeight * TEXT_SCALE)
+
+/** Material's type scale with every style enlarged by [TEXT_SCALE]. */
+private val ScaledTypography = Typography().run {
+    copy(
+        displayLarge = displayLarge.scaled(),
+        displayMedium = displayMedium.scaled(),
+        displaySmall = displaySmall.scaled(),
+        headlineLarge = headlineLarge.scaled(),
+        headlineMedium = headlineMedium.scaled(),
+        headlineSmall = headlineSmall.scaled(),
+        titleLarge = titleLarge.scaled(),
+        titleMedium = titleMedium.scaled(),
+        titleSmall = titleSmall.scaled(),
+        bodyLarge = bodyLarge.scaled(),
+        bodyMedium = bodyMedium.scaled(),
+        bodySmall = bodySmall.scaled(),
+        labelLarge = labelLarge.scaled(),
+        labelMedium = labelMedium.scaled(),
+        labelSmall = labelSmall.scaled(),
+    )
+}
+
 @Composable
 fun ZerkaloTheme(themeMode: ThemeMode, accentIndex: Int, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = accentScheme(isDarkTheme(themeMode, isSystemInDarkTheme()), accentAt(accentIndex)), content = content)
+    MaterialTheme(
+        colorScheme = accentScheme(isDarkTheme(themeMode, isSystemInDarkTheme()), accentAt(accentIndex)),
+        typography = ScaledTypography,
+        content = content,
+    )
 }
 
 /** One accent colour, ringed when it is the one in force. */
@@ -159,9 +191,9 @@ fun TopBar(title: String, action: BarAction, iconFirst: Boolean, extra: BarActio
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
         )
         if (!iconFirst) icon()
-    }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-}
         trailing?.let {
             IconButton(onClick = it.onClick) { Icon(it.icon, contentDescription = it.description) }
         }
+    }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+}

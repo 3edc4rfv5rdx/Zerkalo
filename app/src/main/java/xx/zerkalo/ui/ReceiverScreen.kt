@@ -82,7 +82,7 @@ fun ReceiverScreen(model: ReceiverModel) {
                     )
                     Text(
                         text = pin,
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
