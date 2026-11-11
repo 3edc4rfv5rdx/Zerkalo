@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,39 +70,51 @@ fun ReceiverScreen(model: ReceiverModel) {
         VideoView(model, state.videoWidth, state.videoHeight)
         return
     }
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        if (state.portTaken) {
-            Text(stringResource(R.string.error_port), style = MaterialTheme.typography.headlineSmall)
-        } else {
-            Card(Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(name, style = MaterialTheme.typography.titleLarge)
-                    Text(stringResource(R.string.waiting_connection), style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = stringResource(R.string.pin_label),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(top = 16.dp),
-                    )
-                    Text(
-                        text = pin,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 12.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    state.addresses.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-                    if (state.noPlayer) {
-                        Text(stringResource(R.string.error_no_player), color = MaterialTheme.colorScheme.error)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // A phone on its side: less air, and the card at the top, so the PIN stays in view.
+        val compact = maxHeight < COMPACT_HEIGHT
+        Box(
+            // At least the screen's height, so a card that fits is still centred within it.
+            modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth().heightIn(min = maxHeight)
+                .padding(if (compact) 8.dp else 24.dp),
+            contentAlignment = if (compact) Alignment.TopCenter else Alignment.Center,
+        ) {
+            if (state.portTaken) {
+                Text(stringResource(R.string.error_port), style = MaterialTheme.typography.headlineSmall)
+            } else {
+                Card(Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(if (compact) 16.dp else 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
+                    ) {
+                        Text(name, style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.waiting_connection), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = stringResource(R.string.pin_label),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(top = if (compact) 4.dp else 16.dp),
+                        )
+                        Text(
+                            text = pin,
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 12.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        state.addresses.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        if (state.noPlayer) {
+                            Text(stringResource(R.string.error_no_player), color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** Below this height the waiting card is packed tighter and pinned to the top. */
+private val COMPACT_HEIGHT = 480.dp
 
 /** Hands the file to whatever plays it here; the system asks which app if there are several. */
 private fun openInPlayer(context: Context, request: PlayRequest): Boolean = try {
