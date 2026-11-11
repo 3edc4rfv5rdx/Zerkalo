@@ -41,6 +41,7 @@ import xx.zerkalo.R
 import xx.zerkalo.settings.AppSettings
 import xx.zerkalo.settings.PairedDevices
 import xx.zerkalo.settings.PeerStore
+import xx.zerkalo.settings.PictureFit
 import xx.zerkalo.settings.Role
 import xx.zerkalo.settings.ThemeMode
 import xx.zerkalo.settings.currentLanguageTag
@@ -51,7 +52,7 @@ import xx.zerkalo.video.Quality
 import xx.zerkalo.video.VideoCodec
 
 /** Which editor is open; only one can be at a time. */
-private enum class Editing { NONE, ROLE, NAME, PAIRED, CODEC, FRAME_RATE, QUALITY, THEME, ACCENT, LANGUAGE }
+private enum class Editing { NONE, ROLE, NAME, PAIRED, CODEC, FRAME_RATE, QUALITY, PICTURE_FIT, THEME, ACCENT, LANGUAGE }
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
@@ -66,6 +67,7 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
     val quality by AppSettings.quality.collectAsState()
     val audioAutoSync by AppSettings.audioAutoSync.collectAsState()
     val audioOffsetMs by AppSettings.audioOffsetMs.collectAsState()
+    val pictureFit by AppSettings.pictureFit.collectAsState()
 
     val systemLabel = stringResource(R.string.language_system)
     val languages = remember(context, systemLabel) { supportedLanguages(context, systemLabel) }
@@ -112,6 +114,10 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
                 }
             }
             if (role == Role.RECEIVER) {
+                GroupHeader(stringResource(R.string.group_screen))
+                SettingRow(stringResource(R.string.setting_picture_fit), stringResource(pictureFit.labelRes())) {
+                    editing = Editing.PICTURE_FIT
+                }
                 GroupHeader(stringResource(R.string.group_sound))
                 SwitchRow(stringResource(R.string.setting_audio_auto_sync), audioAutoSync) {
                     AppSettings.setAudioAutoSync(context, it)
@@ -206,6 +212,18 @@ fun SettingsScreen(onBack: () -> Unit, onAbout: () -> Unit) {
             onDismiss = { editing = Editing.NONE },
             onPick = {
                 AppSettings.setQuality(context, it)
+                editing = Editing.NONE
+            },
+        )
+
+        Editing.PICTURE_FIT -> ChoiceDialog(
+            title = stringResource(R.string.setting_picture_fit),
+            options = PictureFit.entries,
+            selected = pictureFit,
+            label = { stringResource(it.labelRes()) },
+            onDismiss = { editing = Editing.NONE },
+            onPick = {
+                AppSettings.setPictureFit(context, it)
                 editing = Editing.NONE
             },
         )
@@ -396,6 +414,11 @@ private fun Quality.labelRes(): Int = when (this) {
     Quality.LOW -> R.string.quality_low
     Quality.MEDIUM -> R.string.quality_medium
     Quality.HIGH -> R.string.quality_high
+}
+
+private fun PictureFit.labelRes(): Int = when (this) {
+    PictureFit.FIT -> R.string.picture_fit
+    PictureFit.FILL -> R.string.picture_fill
 }
 
 private fun ThemeMode.labelRes(): Int = when (this) {

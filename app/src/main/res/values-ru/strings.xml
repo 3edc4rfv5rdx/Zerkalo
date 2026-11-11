@@ -59,6 +59,10 @@
     <string name="waiting_connection">Ожидание подключения</string>
     <string name="group_device">Устройство</string>
     <string name="mirroring_settings">Трансляция</string>
+    <string name="group_screen">Экран</string>
+    <string name="setting_picture_fit">Картинка</string>
+    <string name="picture_fit">Вписать</string>
+    <string name="picture_fill">Заполнить экран</string>
     <string name="group_sound">Звук</string>
     <string name="group_appearance">Оформление</string>
     <string name="group_app">Приложение</string>

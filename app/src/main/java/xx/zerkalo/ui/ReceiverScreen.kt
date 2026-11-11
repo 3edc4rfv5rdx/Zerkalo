@@ -10,11 +10,12 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,9 @@ import xx.zerkalo.R
 import xx.zerkalo.receiver.PlayRequest
 import xx.zerkalo.receiver.ReceiverModel
 import xx.zerkalo.settings.AppSettings
+import xx.zerkalo.settings.PictureFit
+import kotlin.math.max
+import kotlin.math.min
 
 /** What the TV shows: who it is and the PIN to pair with it, or the sender's screen. */
 @Composable
@@ -118,8 +122,18 @@ private fun VideoView(model: ReceiverModel, width: Int, height: Int) {
         onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        val shape = if (width > 0 && height > 0) Modifier.aspectRatio(width.toFloat() / height) else Modifier.fillMaxSize()
+    val fit by AppSettings.pictureFit.collectAsState()
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        val shape = if (width > 0 && height > 0) {
+            val widthScale = maxWidth.value / width
+            val heightScale = maxHeight.value / height
+            // A portrait phone filling a TV would leave a strip of it, so only a landscape stream is cropped.
+            val scale = if (fit == PictureFit.FILL && width > height) max(widthScale, heightScale) else min(widthScale, heightScale)
+            // Larger than the screen when filling; the screen's edges crop it.
+            Modifier.requiredSize((width * scale).dp, (height * scale).dp)
+        } else {
+            Modifier.fillMaxSize()
+        }
         AndroidView(
             modifier = shape,
             factory = { context ->

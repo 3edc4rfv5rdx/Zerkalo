@@ -59,6 +59,10 @@
     <string name="waiting_connection">Waiting for a connection</string>
     <string name="group_device">Device</string>
     <string name="mirroring_settings">Mirroring</string>
+    <string name="group_screen">Screen</string>
+    <string name="setting_picture_fit">Picture</string>
+    <string name="picture_fit">Fit</string>
+    <string name="picture_fill">Fill the screen</string>
     <string name="group_sound">Sound</string>
     <string name="group_appearance">Appearance</string>
     <string name="group_app">App</string>

@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: The receiver can fill the screen with a landscape picture, cropping its edges, instead of fitting it whole.
 - I: 000-Push.sh pushes the current branch to GitHub.
 - F: Stop sits at the bottom of the mirroring and file panel, away from Minimize.
 - F: All text is a fifth larger, and the receiver's PIN a size smaller to match.
